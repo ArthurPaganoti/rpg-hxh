@@ -1,0 +1,79 @@
+name: "🚀 Feature Request"
+description: "Solicitar uma nova funcionalidade"
+title: "🚀 [FEATURE] - <título da funcionalidade>"
+labels: ["feature"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Descrição"
+      description: "Uma descrição clara e concisa da funcionalidade desejada"
+      placeholder: "Descreva a funcionalidade que você gostaria de ver implementada"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problema que resolve"
+      description: "Explique qual problema esta funcionalidade resolve ou que valor ela agrega ao projeto"
+      placeholder: "Esta funcionalidade resolve/melhora..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Comportamento esperado"
+      description: "Descreva como esta funcionalidade deve funcionar do ponto de vista do usuário"
+      placeholder: "Quando o usuário fizer X, deve acontecer Y..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_context
+    attributes:
+      label: "Contexto técnico"
+      description: "Forneça qualquer contexto técnico relevante, como em quais módulos ou arquivos a implementação será feita"
+      placeholder: "Esta funcionalidade provavelmente afetará os seguintes módulos/arquivos..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependências"
+      description: "Liste qualquer dependência desta funcionalidade com outras partes do código ou outras issues"
+      placeholder: "Esta feature depende de #Issue IDs ou outros componentes..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Critérios de aceitação"
+      description: "Liste os critérios claros que definem quando esta funcionalidade estará completa"
+      placeholder: "- [ ] Critério 1\n- [ ] Critério 2\n- [ ] Critério 3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: "Estimativa de complexidade"
+      description: "Qual a complexidade estimada para implementação desta funcionalidade?"
+      options:
+        - Baixa
+        - Média
+        - Alta
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_info
+    attributes:
+      label: "Informações adicionais"
+      description: "Qualquer outra informação, mockups, diagramas, ou referências que possam ajudar na implementação"
+      placeholder: "Adicione outras informações relevantes aqui..."
+    validations:
+      required: false
