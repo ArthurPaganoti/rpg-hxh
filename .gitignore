@@ -38,3 +38,4 @@ out/
 
 ### Application Config ###
 src/main/resources/application.yaml
+.env
