@@ -38,5 +38,9 @@ public class ResponseDTO<T> {
     public static <T> ResponseDTO<T> error(String code, String message) {
         return new ResponseDTO<>(false, code, message, null);
     }
+
+    public static <T> ResponseDTO<T> error(String code, T content, String message) {
+        return new ResponseDTO<>(false, code, message, content);
+    }
 }
 
