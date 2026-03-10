@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/user")
-@Tag(name = "Usuários", description = "Endpoints para gerenciamento de usuários")
+@Tag(name = "Usuários", description = "Gerenciamento de usuários")
 public class UserController {
 
     private final UserService userService;
@@ -25,7 +25,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Registrar novo usuário", description = "Cria um novo usuário no sistema com validação de dados")
+    @Operation(summary = "Registrar novo usuário", description = "Cria um novo usuário no sistema")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Usuário registrado com sucesso",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
