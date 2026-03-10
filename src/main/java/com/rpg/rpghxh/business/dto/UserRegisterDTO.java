@@ -1,5 +1,6 @@
 package com.rpg.rpghxh.business.dto;
 
+import com.rpg.rpghxh.business.validation.PasswordMatch;
 import com.rpg.rpghxh.business.validation.ValidPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@PasswordMatch(password = "senha", confirmPassword = "confirmacaoSenha", message = "A senha e a confirmação de senha não coincidem")
 public class UserRegisterDTO {
 
     private Long id;
