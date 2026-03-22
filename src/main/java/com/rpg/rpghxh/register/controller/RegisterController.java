@@ -1,8 +1,8 @@
-package com.rpg.rpghxh.controllers;
+package com.rpg.rpghxh.register.controller;
 
-import com.rpg.rpghxh.business.dto.ResponseDTO;
-import com.rpg.rpghxh.business.dto.UserRegisterDTO;
-import com.rpg.rpghxh.services.UserService;
+import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.register.dto.RegisterDTO;
+import com.rpg.rpghxh.register.service.RegisterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/user")
 @Tag(name = "Usuários", description = "Gerenciamento de usuários")
-public class UserController {
+public class RegisterController {
 
-    private final UserService userService;
+    private final RegisterService registerService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
+    public RegisterController(RegisterService registerService) {
+        this.registerService = registerService;
     }
 
     @PostMapping("/register")
@@ -32,8 +32,8 @@ public class UserController {
         @ApiResponse(responseCode = "400", description = "Erro de validação: campos inválidos, email já cadastrado, nome já cadastrado ou senhas não coincidem",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
     })
-    public ResponseEntity<ResponseDTO<String>> register(@Valid @RequestBody UserRegisterDTO dto) {
-        ResponseDTO<String> response = userService.register(dto);
+    public ResponseEntity<ResponseDTO<String>> register(@Valid @RequestBody RegisterDTO dto) {
+        ResponseDTO<String> response = registerService.register(dto);
         return ResponseEntity.ok(response);
     }
 }

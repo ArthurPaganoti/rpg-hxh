@@ -1,7 +1,7 @@
-package com.rpg.rpghxh.business.dto;
+package com.rpg.rpghxh.register.dto;
 
-import com.rpg.rpghxh.business.validation.PasswordMatch;
-import com.rpg.rpghxh.business.validation.ValidPassword;
+import com.rpg.rpghxh.shared.validation.PasswordMatch;
+import com.rpg.rpghxh.shared.validation.ValidPassword;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @PasswordMatch(password = "senha", confirmPassword = "confirmacaoSenha", message = "A senha e a confirmação de senha não coincidem")
 @Schema(description = "Dados para registro de um novo usuário")
-public class UserRegisterDTO {
+public class RegisterDTO {
 
     @Hidden
     private Long id;
@@ -43,4 +43,3 @@ public class UserRegisterDTO {
     private String confirmacaoSenha;
 
 }
-

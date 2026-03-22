@@ -1,28 +1,30 @@
-package com.rpg.rpghxh.services;
+package com.rpg.rpghxh.register.service;
 
-import com.rpg.rpghxh.business.dto.ResponseDTO;
-import com.rpg.rpghxh.business.dto.UserRegisterDTO;
-import com.rpg.rpghxh.entities.User;
-import com.rpg.rpghxh.exceptions.EmailAlreadyExistsException;
-import com.rpg.rpghxh.exceptions.NameAlreadyExistsException;
-import com.rpg.rpghxh.repositories.UserRepository;
+import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.EmailAlreadyExistsException;
+import com.rpg.rpghxh.shared.exceptions.NameAlreadyExistsException;
+import com.rpg.rpghxh.entities.user.repository.UserRepository;
+import com.rpg.rpghxh.register.dto.RegisterDTO;
+import com.rpg.rpghxh.register.mapper.RegisterMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class UserService {
+public class RegisterService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RegisterMapper registerMapper;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public RegisterService(UserRepository userRepository, PasswordEncoder passwordEncoder, RegisterMapper registerMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.registerMapper = registerMapper;
     }
 
     @Transactional
-    public ResponseDTO<String> register(UserRegisterDTO dto) {
+    public ResponseDTO<String> register(RegisterDTO dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new EmailAlreadyExistsException("O email '" + dto.getEmail() + "' já está cadastrado");
@@ -32,12 +34,7 @@ public class UserService {
             throw new NameAlreadyExistsException("O nome '" + dto.getName() + "' já está cadastrado");
         }
 
-        User user = new User();
-        user.setName(dto.getName());
-        user.setEmail(dto.getEmail());
-        user.setSenha(passwordEncoder.encode(dto.getSenha()));
-
-        userRepository.save(user);
+        userRepository.save(registerMapper.toEntity(dto, passwordEncoder.encode(dto.getSenha())));
 
         return ResponseDTO.success("Usuário registrado com sucesso");
     }
