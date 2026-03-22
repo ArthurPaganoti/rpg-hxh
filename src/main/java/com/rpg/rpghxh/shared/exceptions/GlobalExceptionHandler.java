@@ -16,6 +16,13 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleInvalidCredentialsException(InvalidCredentialsException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ResponseDTO<Object>> handleBusinessException(BusinessException ex) {
         return ResponseEntity
