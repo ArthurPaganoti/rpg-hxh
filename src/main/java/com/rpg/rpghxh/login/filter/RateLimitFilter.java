@@ -18,7 +18,7 @@ import java.time.Duration;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final String RATE_LIMIT_PREFIX = "rate_limit:login:";
+    private static final String RATE_LIMIT_PREFIX = "rate_limit:";
     private static final int MAX_REQUESTS = 5;
     private static final Duration WINDOW = Duration.ofMinutes(1);
 
@@ -34,7 +34,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String clientIp = getClientIp(request);
-        String key = RATE_LIMIT_PREFIX + clientIp;
+        String path = request.getServletPath().substring(1);
+        String key = RATE_LIMIT_PREFIX + path + ":" + clientIp;
 
         Long count = redisTemplate.opsForValue().increment(key);
         if (count != null && count == 1) {
@@ -59,7 +60,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !("/login".equals(request.getServletPath()) && "POST".equalsIgnoreCase(request.getMethod()));
+        String path = request.getServletPath();
+        boolean isPost = "POST".equalsIgnoreCase(request.getMethod());
+        boolean isProtectedRoute = "/login".equals(path) || "/register".equals(path);
+        return !(isPost && isProtectedRoute);
     }
 
     private String getClientIp(HttpServletRequest request) {
