@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.business.dto;
+package com.rpg.rpghxh.shared.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
@@ -43,4 +43,3 @@ public class ResponseDTO<T> {
         return new ResponseDTO<>(false, code, message, content);
     }
 }
-

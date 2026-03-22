@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.business.validation;
+package com.rpg.rpghxh.shared.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
@@ -17,4 +17,3 @@ public @interface ValidPassword {
 
     Class<? extends Payload>[] payload() default {};
 }
-

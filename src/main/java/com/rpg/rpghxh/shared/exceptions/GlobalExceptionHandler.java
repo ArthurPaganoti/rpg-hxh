@@ -1,6 +1,6 @@
-package com.rpg.rpghxh.exceptions;
+package com.rpg.rpghxh.shared.exceptions;
 
-import com.rpg.rpghxh.business.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

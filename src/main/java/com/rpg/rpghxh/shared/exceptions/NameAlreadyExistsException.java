@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.exceptions;
+package com.rpg.rpghxh.shared.exceptions;
 
 public class NameAlreadyExistsException extends BusinessException {
 
@@ -6,4 +6,3 @@ public class NameAlreadyExistsException extends BusinessException {
         super(message);
     }
 }
-

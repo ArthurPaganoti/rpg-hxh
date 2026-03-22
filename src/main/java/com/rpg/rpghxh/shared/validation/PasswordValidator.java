@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.business.validation;
+package com.rpg.rpghxh.shared.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
@@ -25,4 +25,3 @@ public class PasswordValidator implements ConstraintValidator<ValidPassword, Str
         return pattern.matcher(password).matches();
     }
 }
-

@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.exceptions;
+package com.rpg.rpghxh.shared.exceptions;
 
 public class BusinessException extends RuntimeException {
 
@@ -6,4 +6,3 @@ public class BusinessException extends RuntimeException {
         super(message);
     }
 }
-

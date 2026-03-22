@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.exceptions;
+package com.rpg.rpghxh.shared.exceptions;
 
 public class EmailAlreadyExistsException extends BusinessException {
 
@@ -6,4 +6,3 @@ public class EmailAlreadyExistsException extends BusinessException {
         super(message);
     }
 }
-

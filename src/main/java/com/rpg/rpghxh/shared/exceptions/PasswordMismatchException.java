@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.exceptions;
+package com.rpg.rpghxh.shared.exceptions;
 
 public class PasswordMismatchException extends BusinessException {
 
@@ -6,4 +6,3 @@ public class PasswordMismatchException extends BusinessException {
         super(message);
     }
 }
-
