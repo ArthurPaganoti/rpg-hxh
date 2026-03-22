@@ -144,16 +144,17 @@ class RegisterControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
-    // BUG: Mesmo caso do @PasswordMatch - retorna 400 sem formato ResponseDTO
     @Test
-    void shouldReturnBadRequestWhenConfirmacaoSenhaIsBlank() throws Exception {
+    void shouldReturnValidationErrorWhenConfirmacaoSenhaIsBlank() throws Exception {
         RegisterDTO dto = validDTO();
         dto.setConfirmacaoSenha("");
 
         mockMvc.perform(post("/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.content.confirmacaoSenha").exists());
     }
 
     @Test
