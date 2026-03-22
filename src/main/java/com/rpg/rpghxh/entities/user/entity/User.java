@@ -1,4 +1,4 @@
-package com.rpg.rpghxh.entities;
+package com.rpg.rpghxh.entities.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
