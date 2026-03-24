@@ -4,8 +4,7 @@
 
 Uma API backend open source para RPG de mesa, construída com temática **Hunter x Hunter** e baseada no sistema **Hunter Legacy**. A arquitetura é modular, permitindo fácil adaptação para outros sistemas de RPG.
 
-![img.png](img.png)
-
+![KILLUA_IMAGEM_README.png](src/main/java/com/rpg/rpghxh/utils/imagens/KILLUA_IMAGEM_README.png)
 ---
 
 ## 🧰 Tech Stack
