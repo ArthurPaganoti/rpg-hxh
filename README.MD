@@ -6,7 +6,6 @@ Uma API backend open source para RPG de mesa, construída com temática **Hunter
 
 ![img.png](img.png)
 
-
 ---
 
 ## 🧰 Tech Stack
