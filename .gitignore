@@ -41,6 +41,3 @@ out/
 ### Application Config ###
 src/main/resources/application.yaml
 .env
-
-# Local project image asset not intended for versioning
-/img.png
