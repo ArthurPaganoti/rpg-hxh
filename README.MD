@@ -4,6 +4,9 @@
 
 Uma API backend open source para RPG de mesa, construída com temática **Hunter x Hunter** e baseada no sistema **Hunter Legacy**. A arquitetura é modular, permitindo fácil adaptação para outros sistemas de RPG.
 
+![img.png](img.png)
+
+
 ---
 
 ## 🧰 Tech Stack
