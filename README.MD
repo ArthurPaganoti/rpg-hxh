@@ -40,8 +40,15 @@ com.rpg.rpghxh/
 │   ├── service/       # LoginService, JwtService, RedisSessionService
 │   ├── dto/
 │   └── filter/        # JwtAuthenticationFilter, RateLimitFilter
+├── rooms/             # 🔹 Slice: Criação e gerenciamento de salas
+│   ├── controller/
+│   ├── service/
+│   └── dto/
 ├── entities/
-│   └── user/          # 🔸 Domínio: Usuário
+│   ├── user/          # 🔸 Domínio: Usuário
+│   │   ├── entity/
+│   │   └── repository/
+│   └── room/          # 🔸 Domínio: Sala
 │       ├── entity/
 │       └── repository/
 ├── shared/            # 🔹 Componentes globais reutilizáveis
@@ -130,6 +137,48 @@ Header: `Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...`
 - Rate limiting: 5 requisições/minuto por IP
 
 > Documentação completa: [`docs/authentication.md`](docs/authentication.md)
+
+---
+
+### `POST /rooms` — Criação de Sala
+
+Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Requer token JWT.
+
+**Request:**
+
+```json
+{
+  "name": "Sala do Gon",
+  "isPrivate": false
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "Sala criada com sucesso",
+  "content": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Sala do Gon",
+    "masterName": "Gon Freecss",
+    "isPrivate": false,
+    "currentPlayers": 1,
+    "maxPlayers": 10,
+    "createdAt": "2026-03-24T12:00:00"
+  },
+  "timestamp": "2026-03-24T15:00:00Z"
+}
+```
+
+**Regras:**
+- `name` — Obrigatório (`@NotBlank`)
+- `isPrivate` — Se `true`, gera um `inviteCode` único de 6 caracteres
+- O usuário autenticado se torna o Mestre (`master_id`)
+- `currentPlayers` inicia com 1 (o Mestre), `maxPlayers` padrão é 10
+
+> Documentação completa: [`docs/rooms.md`](docs/rooms.md)
 
 ---
 
@@ -247,6 +296,7 @@ JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
 | [`docs/initial_setup.md`](docs/initial_setup.md) | Configuração de ambiente, variáveis, banco de dados e Redis |
 | [`docs/register.md`](docs/register.md) | Detalhes técnicos do fluxo de registro de usuário |
 | [`docs/authentication.md`](docs/authentication.md) | Sistema de login, JWT, sessões Redis e rate limiting |
+| [`docs/rooms.md`](docs/rooms.md) | Criação de salas, regras de negócio e invite code |
 
 ---
 
