@@ -3,13 +3,15 @@ package com.rpg.rpghxh.rooms.controller;
 import com.rpg.rpghxh.config.SecurityConfig;
 import com.rpg.rpghxh.login.filter.JwtAuthenticationFilter;
 import com.rpg.rpghxh.login.filter.RateLimitFilter;
+import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.GlobalExceptionHandler;
+import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
+import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -27,6 +29,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -40,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({GlobalExceptionHandler.class, RoomControllerTest.TestSecurityConfig.class})
 class RoomControllerTest {
 
-    @TestConfiguration
+    @org.springframework.boot.test.context.TestConfiguration
     static class TestSecurityConfig {
         @Bean
         public SecurityFilterChain testFilterChain(HttpSecurity http) throws Exception {
@@ -63,7 +66,6 @@ class RoomControllerTest {
                 .id(UUID.randomUUID())
                 .name("Sala do Gon")
                 .masterName("Gon Freecss")
-                .isPrivate(false)
                 .currentPlayers(1)
                 .maxPlayers(10)
                 .createdAt(LocalDateTime.now())
@@ -73,7 +75,7 @@ class RoomControllerTest {
 
         mockMvc.perform(post("/rooms")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"Sala do Gon\", \"isPrivate\": false}"))
+                        .content("{\"name\": \"Sala do Gon\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Sala criada com sucesso"))
@@ -85,35 +87,10 @@ class RoomControllerTest {
 
     @Test
     @WithMockUser(username = "gon@hunter.com")
-    void shouldReturnCreatedWhenPrivateRoomIsCreated() throws Exception {
-        RoomResponseDTO roomResponse = RoomResponseDTO.builder()
-                .id(UUID.randomUUID())
-                .name("Sala Secreta")
-                .masterName("Gon Freecss")
-                .isPrivate(true)
-                .inviteCode("Ab3xZ9")
-                .currentPlayers(1)
-                .maxPlayers(10)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        when(roomService.createRoom(any())).thenReturn(ResponseDTO.success(roomResponse, "Sala criada com sucesso"));
-
-        mockMvc.perform(post("/rooms")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"Sala Secreta\", \"isPrivate\": true}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.content.isPrivate").value(true))
-                .andExpect(jsonPath("$.content.inviteCode").value("Ab3xZ9"));
-    }
-
-    @Test
-    @WithMockUser(username = "gon@hunter.com")
     void shouldReturnValidationErrorWhenNameIsBlank() throws Exception {
         mockMvc.perform(post("/rooms")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"\", \"isPrivate\": false}"))
+                        .content("{\"name\": \"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.content.name").exists());
@@ -124,7 +101,7 @@ class RoomControllerTest {
     void shouldReturnValidationErrorWhenNameIsNull() throws Exception {
         mockMvc.perform(post("/rooms")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"isPrivate\": false}"))
+                        .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
@@ -133,7 +110,60 @@ class RoomControllerTest {
     void shouldDenyAccessWhenNotAuthenticated() throws Exception {
         mockMvc.perform(post("/rooms")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"Sala do Gon\", \"isPrivate\": false}"))
+                        .content("{\"name\": \"Sala do Gon\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnInviteLinkWhenUserIsMaster() throws Exception {
+        UUID roomId = UUID.randomUUID();
+        String inviteHash = UUID.randomUUID().toString();
+
+        InviteResponseDTO inviteResponse = InviteResponseDTO.builder()
+                .inviteUrl("https://api.rpg.com/rooms/join/" + inviteHash)
+                .build();
+
+        when(roomService.getInviteLink(roomId)).thenReturn(ResponseDTO.success(inviteResponse, "Link de convite gerado com sucesso"));
+
+        mockMvc.perform(get("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Link de convite gerado com sucesso"))
+                .andExpect(jsonPath("$.content.inviteUrl").value("https://api.rpg.com/rooms/join/" + inviteHash));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterRequestsInviteLink() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.getInviteLink(roomId)).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(get("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenRoomNotFound() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.getInviteLink(roomId)).thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(get("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyInviteLinkAccessWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(get("/rooms/" + roomId + "/invite"))
                 .andExpect(status().isForbidden());
     }
 }

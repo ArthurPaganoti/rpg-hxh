@@ -5,8 +5,11 @@ import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
+import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
+import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +29,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +40,9 @@ class RoomServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private RedisInviteService redisInviteService;
 
     @InjectMocks
     private RoomService roomService;
@@ -62,18 +69,15 @@ class RoomServiceTest {
     }
 
     @Test
-    void createRoom_PublicRoom_ShouldReturnSuccessWithoutInviteCode() {
+    void createRoom_ShouldReturnSuccessWithRoomData() {
         CreateRoomDTO dto = CreateRoomDTO.builder()
                 .name("Sala do Gon")
-                .isPrivate(false)
                 .build();
 
         Room savedRoom = Room.builder()
                 .id(UUID.randomUUID())
                 .name("Sala do Gon")
                 .master(masterUser)
-                .isPrivate(false)
-                .inviteCode(null)
                 .currentPlayers(1)
                 .maxPlayers(10)
                 .createdAt(LocalDateTime.now())
@@ -89,50 +93,14 @@ class RoomServiceTest {
         assertNotNull(response.getContent());
         assertEquals("Sala do Gon", response.getContent().getName());
         assertEquals("Gon Freecss", response.getContent().getMasterName());
-        assertFalse(response.getContent().isPrivate());
-        assertNull(response.getContent().getInviteCode());
         assertEquals(1, response.getContent().getCurrentPlayers());
         assertEquals(10, response.getContent().getMaxPlayers());
-
-        ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
-        verify(roomRepository).save(roomCaptor.capture());
-        assertNull(roomCaptor.getValue().getInviteCode());
     }
 
     @Test
-    void createRoom_PrivateRoom_ShouldReturnSuccessWithInviteCode() {
-        CreateRoomDTO dto = CreateRoomDTO.builder()
-                .name("Sala Secreta")
-                .isPrivate(true)
-                .build();
-
-        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
-        when(roomRepository.save(any(Room.class))).thenAnswer(invocation -> {
-            Room room = invocation.getArgument(0);
-            room.setId(UUID.randomUUID());
-            room.setCreatedAt(LocalDateTime.now());
-            return room;
-        });
-
-        ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
-
-        assertTrue(response.isSuccess());
-        assertEquals("Sala criada com sucesso", response.getMessage());
-        assertTrue(response.getContent().isPrivate());
-        assertNotNull(response.getContent().getInviteCode());
-        assertEquals(6, response.getContent().getInviteCode().length());
-
-        ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
-        verify(roomRepository).save(roomCaptor.capture());
-        assertNotNull(roomCaptor.getValue().getInviteCode());
-        assertEquals(6, roomCaptor.getValue().getInviteCode().length());
-    }
-
-    @Test
-    void createRoom_UserNotFound_ShouldThrowRuntimeException() {
+    void createRoom_UserNotFound_ShouldThrowUserNotFoundException() {
         CreateRoomDTO dto = CreateRoomDTO.builder()
                 .name("Sala do Gon")
-                .isPrivate(false)
                 .build();
 
         when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.empty());
@@ -145,14 +113,12 @@ class RoomServiceTest {
     void createRoom_ShouldSetAuthenticatedUserAsMaster() {
         CreateRoomDTO dto = CreateRoomDTO.builder()
                 .name("Sala do Mestre")
-                .isPrivate(false)
                 .build();
 
         Room savedRoom = Room.builder()
                 .id(UUID.randomUUID())
                 .name("Sala do Mestre")
                 .master(masterUser)
-                .isPrivate(false)
                 .currentPlayers(1)
                 .maxPlayers(10)
                 .createdAt(LocalDateTime.now())
@@ -174,14 +140,12 @@ class RoomServiceTest {
     void createRoom_ShouldDefaultToOneCurrentPlayerAndTenMaxPlayers() {
         CreateRoomDTO dto = CreateRoomDTO.builder()
                 .name("Sala Padrao")
-                .isPrivate(false)
                 .build();
 
         Room savedRoom = Room.builder()
                 .id(UUID.randomUUID())
                 .name("Sala Padrao")
                 .master(masterUser)
-                .isPrivate(false)
                 .currentPlayers(1)
                 .maxPlayers(10)
                 .createdAt(LocalDateTime.now())
@@ -194,5 +158,86 @@ class RoomServiceTest {
 
         assertEquals(1, response.getContent().getCurrentPlayers());
         assertEquals(10, response.getContent().getMaxPlayers());
+    }
+
+    @Test
+    void getInviteLink_AsMaster_ShouldReturnInviteUrl() {
+        UUID roomId = UUID.randomUUID();
+        String inviteHash = UUID.randomUUID().toString();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(redisInviteService.getOrCreateInvite(eq(roomId), eq(1L))).thenReturn(inviteHash);
+
+        ResponseDTO<InviteResponseDTO> response = roomService.getInviteLink(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Link de convite gerado com sucesso", response.getMessage());
+        assertEquals("https://api.rpg.com/rooms/join/" + inviteHash, response.getContent().getInviteUrl());
+    }
+
+    @Test
+    void getInviteLink_AsMaster_ShouldDelegateToRedisInviteService() {
+        UUID roomId = UUID.randomUUID();
+        String inviteHash = UUID.randomUUID().toString();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(redisInviteService.getOrCreateInvite(eq(roomId), eq(1L))).thenReturn(inviteHash);
+
+        roomService.getInviteLink(roomId);
+
+        verify(redisInviteService).getOrCreateInvite(roomId, 1L);
+    }
+
+    @Test
+    void getInviteLink_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User otherUser = User.builder()
+                .id(2L)
+                .name("Killua Zoldyck")
+                .email("gon@hunter.com")
+                .build();
+
+        User roomMaster = User.builder()
+                .id(99L)
+                .name("Outro Mestre")
+                .email("master@hunter.com")
+                .build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Outro")
+                .master(roomMaster)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(otherUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.getInviteLink(roomId));
+        verify(redisInviteService, never()).getOrCreateInvite(any(), any());
+    }
+
+    @Test
+    void getInviteLink_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.getInviteLink(roomId));
     }
 }
