@@ -142,14 +142,13 @@ Header: `Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...`
 
 ### `POST /rooms` — Criação de Sala
 
-Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Requer token JWT.
+Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Requer token JWT. Todas as salas são privadas — o acesso é feito exclusivamente via link de convite.
 
 **Request:**
 
 ```json
 {
-  "name": "Sala do Gon",
-  "isPrivate": false
+  "name": "Sala do Gon"
 }
 ```
 
@@ -163,7 +162,6 @@ Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Req
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Sala do Gon",
     "masterName": "Gon Freecss",
-    "isPrivate": false,
     "currentPlayers": 1,
     "maxPlayers": 10,
     "createdAt": "2026-03-24T12:00:00"
@@ -174,9 +172,32 @@ Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Req
 
 **Regras:**
 - `name` — Obrigatório (`@NotBlank`)
-- `isPrivate` — Se `true`, gera um `inviteCode` único de 6 caracteres
 - O usuário autenticado se torna o Mestre (`master_id`)
 - `currentPlayers` inicia com 1 (o Mestre), `maxPlayers` padrão é 10
+
+---
+
+### `GET /rooms/{id}/invite` — Secure Invite System
+
+Gera ou recupera o link de convite da sala. **Apenas o Mestre** da sala pode acessar. Requer token JWT. O link é armazenado no Redis com validade de **8 horas**.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Link de convite gerado com sucesso",
+  "content": {
+    "inviteUrl": "https://api.rpg.com/rooms/join/550e8400-e29b-41d4-a716-446655440000"
+  },
+  "timestamp": "2026-03-28T15:00:00Z"
+}
+```
+
+**Regras:**
+- Apenas o Mestre da sala pode gerar o link (403 para outros usuários)
+- O `invite_hash` é um UUID criptograficamente seguro armazenado no Redis
+- Validade de 8 horas — após expirar, um novo link é gerado automaticamente
 
 > Documentação completa: [`docs/rooms.md`](docs/rooms.md)
 
