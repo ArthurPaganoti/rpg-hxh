@@ -5,28 +5,33 @@ import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
+import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
+import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
+import java.util.UUID;
 
 @Service
 public class RoomService {
 
-    private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    private static final int INVITE_CODE_LENGTH = 6;
-    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String INVITE_BASE_URL = "https://api.rpg.com/rooms/join/";
 
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final RedisInviteService redisInviteService;
 
-    public RoomService(RoomRepository roomRepository, UserRepository userRepository) {
+    public RoomService(RoomRepository roomRepository,
+                       UserRepository userRepository,
+                       RedisInviteService redisInviteService) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
+        this.redisInviteService = redisInviteService;
     }
 
     @Transactional
@@ -36,36 +41,48 @@ public class RoomService {
         User master = userRepository.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);
 
-        String inviteCode = dto.isPrivate() ? generateInviteCode() : null;
-
         Room room = Room.builder()
                 .name(dto.getName())
                 .master(master)
-                .isPrivate(dto.isPrivate())
-                .inviteCode(inviteCode)
                 .build();
 
         Room savedRoom = roomRepository.save(room);
 
-        RoomResponseDTO response = RoomResponseDTO.builder()
-                .id(savedRoom.getId())
-                .name(savedRoom.getName())
-                .masterName(master.getName())
-                .isPrivate(savedRoom.isPrivate())
-                .inviteCode(savedRoom.getInviteCode())
-                .currentPlayers(savedRoom.getCurrentPlayers())
-                .maxPlayers(savedRoom.getMaxPlayers())
-                .createdAt(savedRoom.getCreatedAt())
-                .build();
+        RoomResponseDTO response = buildRoomResponse(savedRoom, master);
 
         return ResponseDTO.success(response, "Sala criada com sucesso");
     }
 
-    private String generateInviteCode() {
-        StringBuilder code = new StringBuilder(INVITE_CODE_LENGTH);
-        for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
-            code.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+    public ResponseDTO<InviteResponseDTO> getInviteLink(UUID roomId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (!room.getMaster().getId().equals(user.getId())) {
+            throw new RoomAccessDeniedException();
         }
-        return code.toString();
+
+        String inviteHash = redisInviteService.getOrCreateInvite(roomId, user.getId());
+
+        InviteResponseDTO response = InviteResponseDTO.builder()
+                .inviteUrl(INVITE_BASE_URL + inviteHash)
+                .build();
+
+        return ResponseDTO.success(response, "Link de convite gerado com sucesso");
+    }
+
+    private RoomResponseDTO buildRoomResponse(Room room, User master) {
+        return RoomResponseDTO.builder()
+                .id(room.getId())
+                .name(room.getName())
+                .masterName(master.getName())
+                .currentPlayers(room.getCurrentPlayers())
+                .maxPlayers(room.getMaxPlayers())
+                .createdAt(room.getCreatedAt())
+                .build();
     }
 }
