@@ -1,0 +1,3 @@
+ALTER TABLE rooms DROP COLUMN IF EXISTS is_private;
+ALTER TABLE rooms DROP COLUMN IF EXISTS invite_code;
+ALTER TABLE rooms DROP COLUMN IF EXISTS invite_hash;

@@ -27,12 +27,6 @@ public class Room {
     @JoinColumn(name = "master_id", nullable = false)
     private User master;
 
-    @Column(name = "is_private", nullable = false)
-    private boolean isPrivate;
-
-    @Column(name = "invite_code", unique = true, length = 6)
-    private String inviteCode;
-
     @Column(name = "current_players", nullable = false)
     @Builder.Default
     private int currentPlayers = 1;
