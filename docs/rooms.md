@@ -4,7 +4,7 @@ Este documento descreve o sistema de criacao e convite de Salas de RPG da API RP
 
 ## Visao Geral
 
-O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG, tornando-se automaticamente o Mestre (Master) da sala. Salas sao **privadas por padrao** (Security by Default). Salas privadas recebem um codigo de convite unico de 6 caracteres. O link de convite seguro e armazenado no **Redis com TTL de 8 horas**.
+O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG, tornando-se automaticamente o Mestre (Master) da sala. Todas as salas sao privadas — o acesso e feito exclusivamente via link de convite. O link de convite seguro e armazenado no **Redis com TTL de 8 horas**.
 
 ## Endpoints
 
@@ -24,9 +24,8 @@ O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG
 | Campo | Tipo | Obrigatorio | Regras de Validacao |
 |-------|------|-------------|---------------------|
 | `name` | `String` | Sim | Nao pode ser vazio (`@NotBlank`) |
-| `isPrivate` | `Boolean` | Nao | Default `true` (Security by Default) |
 
-#### Exemplo (sem `isPrivate` — privada por padrao)
+#### Exemplo
 
 ```json
 {
@@ -34,18 +33,9 @@ O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG
 }
 ```
 
-#### Exemplo (Sala Publica)
-
-```json
-{
-  "name": "Sala Publica",
-  "isPrivate": false
-}
-```
-
 #### Respostas
 
-**201 Created — Sala Criada com Sucesso (Privada):**
+**201 Created — Sala Criada com Sucesso:**
 
 ```json
 {
@@ -55,28 +45,6 @@ O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Sala do Gon",
     "masterName": "Gon Freecss",
-    "isPrivate": true,
-    "inviteCode": "Ab3xZ9",
-    "currentPlayers": 1,
-    "maxPlayers": 10,
-    "createdAt": "2026-03-24T12:00:00"
-  },
-  "timestamp": "2026-03-24T15:00:00Z"
-}
-```
-
-**201 Created — Sala Publica:**
-
-```json
-{
-  "success": true,
-  "message": "Sala criada com sucesso",
-  "content": {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "name": "Sala Publica",
-    "masterName": "Gon Freecss",
-    "isPrivate": false,
-    "inviteCode": null,
     "currentPlayers": 1,
     "maxPlayers": 10,
     "createdAt": "2026-03-24T12:00:00"
@@ -186,10 +154,8 @@ RoomController (@Valid @RequestBody CreateRoomDTO)
 RoomService.createRoom(dto)
   |  1. Extrai email do SecurityContextHolder
   |  2. Busca usuario por email via UserRepository
-  |  3. isPrivate defaults to true quando null
-  |  4. Se isPrivate=true, gera invite_code (6 chars alfanumericos)
-  |  5. Cria Room com master=usuario, currentPlayers=1, maxPlayers=10
-  |  6. Salva via RoomRepository
+  |  3. Cria Room com master=usuario, currentPlayers=1, maxPlayers=10
+  |  4. Salva via RoomRepository
   v
 RoomController retorna 201 Created + ResponseDTO.success(RoomResponseDTO)
 ```
@@ -235,8 +201,6 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 |-------|-----------|
 | Mastership | O usuario autenticado se torna o Mestre da sala |
 | Multiplas salas | Um usuario pode ser Mestre de multiplas salas |
-| Privacy by Default | `isPrivate` defaults to `true` quando nao informado (Security by Default) |
-| Invite Code | Se `isPrivate=true`, um `invite_code` unico de 6 caracteres e gerado (PostgreSQL) |
 | Invite Link | Link de convite gerado sob demanda via `GET /rooms/{id}/invite` (Redis, TTL 8h) |
 | Master-only Invite | Apenas o Mestre pode gerar/obter o link de convite |
 | Jogadores iniciais | `current_players` inicia com 1 (o Mestre) |
@@ -244,15 +208,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 
 ## Invite System (Sistema de Convite Seguro)
 
-### Invite Code (PostgreSQL)
-O `invite_code` e gerado apenas para salas privadas (`isPrivate=true`):
-- 6 caracteres alfanumericos (A-Z, a-z, 0-9)
-- Gerado com `SecureRandom` para seguranca
-- Armazenado como coluna `UNIQUE` no banco
-- Persistente (nao expira)
-
-### Invite Link (Redis)
-O link de convite e gerado sob demanda pelo Mestre:
+O link de convite e gerado sob demanda pelo Mestre via Redis:
 - UUID criptograficamente seguro (`UUID.randomUUID()`)
 - Armazenado no Redis como Hash com TTL de 8 horas
 - Campos: `inviteHash`, `masterId`, `createdAt`
@@ -278,6 +234,24 @@ CREATE TABLE rooms (
 
 -- V3__Add_Invite_Hash_And_Default_Privacy.sql
 ALTER TABLE rooms ALTER COLUMN is_private SET DEFAULT TRUE;
+
+-- V4__Remove_Privacy_And_Invite_Code.sql
+ALTER TABLE rooms DROP COLUMN IF EXISTS is_private;
+ALTER TABLE rooms DROP COLUMN IF EXISTS invite_code;
+ALTER TABLE rooms DROP COLUMN IF EXISTS invite_hash;
+```
+
+### Schema final da tabela `rooms`
+
+```sql
+rooms (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    master_id BIGINT NOT NULL REFERENCES users(id),
+    current_players INTEGER NOT NULL DEFAULT 1,
+    max_players INTEGER NOT NULL DEFAULT 10,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+)
 ```
 
 ## Swagger
