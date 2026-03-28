@@ -23,6 +23,20 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
     }
 
+    @ExceptionHandler(RoomAccessDeniedException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleRoomAccessDeniedException(RoomAccessDeniedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RoomNotFoundException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleRoomNotFoundException(RoomNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ResponseDTO<Object>> handleBusinessException(BusinessException ex) {
         return ResponseEntity
