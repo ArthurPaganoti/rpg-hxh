@@ -1,6 +1,7 @@
 package com.rpg.rpghxh.rooms.controller;
 
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
+import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
@@ -13,10 +14,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/rooms")
@@ -30,7 +30,7 @@ public class RoomController {
     }
 
     @PostMapping
-    @Operation(summary = "Criar nova sala", description = "Cria uma nova sala de RPG. O usuario autenticado se torna o Mestre da sala.")
+    @Operation(summary = "Criar nova sala", description = "Cria uma nova sala de RPG. O usuario autenticado se torna o Mestre da sala. Todas as salas sao privadas.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Sala criada com sucesso",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
@@ -42,5 +42,20 @@ public class RoomController {
     public ResponseEntity<ResponseDTO<RoomResponseDTO>> createRoom(@Valid @RequestBody CreateRoomDTO dto) {
         ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{id}/invite")
+    @Operation(summary = "Gerar link de convite", description = "Gera ou recupera o link de convite da sala. Apenas o Mestre da sala pode acessar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Link de convite gerado com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode gerar o link de convite",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<InviteResponseDTO>> getInviteLink(@PathVariable UUID id) {
+        ResponseDTO<InviteResponseDTO> response = roomService.getInviteLink(id);
+        return ResponseEntity.ok(response);
     }
 }
