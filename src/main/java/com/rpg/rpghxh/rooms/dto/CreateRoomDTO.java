@@ -1,6 +1,5 @@
 package com.rpg.rpghxh.rooms.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -18,8 +17,4 @@ public class CreateRoomDTO {
     @NotBlank(message = "O nome da sala e obrigatorio")
     @Schema(description = "Nome da sala", example = "Sala do Gon")
     private String name;
-
-    @JsonProperty("isPrivate")
-    @Schema(description = "Se a sala e privada", example = "false")
-    private boolean isPrivate;
 }
