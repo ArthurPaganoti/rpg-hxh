@@ -23,10 +23,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Duration WINDOW = Duration.ofMinutes(1);
 
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
-    public RateLimitFilter(StringRedisTemplate redisTemplate) {
+    public RateLimitFilter(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
