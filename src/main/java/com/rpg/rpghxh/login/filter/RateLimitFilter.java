@@ -35,7 +35,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String clientIp = getClientIp(request);
-        String path = request.getServletPath().substring(1);
+        String path = normalizedPath(request.getServletPath().substring(1));
         String key = RATE_LIMIT_PREFIX + path + ":" + clientIp;
 
         Long count = redisTemplate.opsForValue().increment(key);
@@ -62,9 +62,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        boolean isPost = "POST".equalsIgnoreCase(request.getMethod());
-        boolean isProtectedRoute = "/login".equals(path) || "/register".equals(path);
-        return !(isPost && isProtectedRoute);
+        String method = request.getMethod();
+        boolean isLoginOrRegister = "POST".equalsIgnoreCase(method) &&
+                ("/login".equals(path) || "/register".equals(path));
+        boolean isJoinRoom = "GET".equalsIgnoreCase(method) && path.startsWith("/rooms/join/");
+        return !(isLoginOrRegister || isJoinRoom);
+    }
+
+    private String normalizedPath(String path) {
+        if (path.startsWith("rooms/join/")) {
+            return "rooms/join";
+        }
+        return path;
     }
 
     private String getClientIp(HttpServletRequest request) {
