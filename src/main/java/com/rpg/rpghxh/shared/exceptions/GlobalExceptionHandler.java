@@ -8,6 +8,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,6 +36,27 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ResponseDTO<Object>> handleRoomNotFoundException(RoomNotFoundException ex) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
+                .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
+    }
+
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<ResponseDTO<Object>> handleNoHandlerFound(Exception ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ResponseDTO.error("BUSINESS_ERROR", "Endpoint nao encontrado"));
+    }
+
+    @ExceptionHandler(InvalidInviteException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleInvalidInviteException(InvalidInviteException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
+    }
+
+    @ExceptionHandler({RoomFullException.class, PlayerAlreadyInRoomException.class})
+    public ResponseEntity<ResponseDTO<Object>> handleConflictExceptions(BusinessException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
     }
 
