@@ -186,7 +186,7 @@ class RoomControllerTest {
 
         when(roomService.joinRoom(hash)).thenReturn(ResponseDTO.success(roomResponse, "Entrou na sala com sucesso"));
 
-        mockMvc.perform(get("/rooms/join/" + hash))
+        mockMvc.perform(post("/rooms/join/" + hash))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Entrou na sala com sucesso"))
@@ -200,7 +200,7 @@ class RoomControllerTest {
 
         when(roomService.joinRoom(hash)).thenThrow(new InvalidInviteException());
 
-        mockMvc.perform(get("/rooms/join/" + hash))
+        mockMvc.perform(post("/rooms/join/" + hash))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
@@ -213,7 +213,7 @@ class RoomControllerTest {
 
         when(roomService.joinRoom(hash)).thenThrow(new RoomFullException());
 
-        mockMvc.perform(get("/rooms/join/" + hash))
+        mockMvc.perform(post("/rooms/join/" + hash))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
@@ -226,7 +226,7 @@ class RoomControllerTest {
 
         when(roomService.joinRoom(hash)).thenThrow(new PlayerAlreadyInRoomException());
 
-        mockMvc.perform(get("/rooms/join/" + hash))
+        mockMvc.perform(post("/rooms/join/" + hash))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
@@ -236,7 +236,7 @@ class RoomControllerTest {
     void shouldDenyJoinRoomWhenNotAuthenticated() throws Exception {
         String hash = UUID.randomUUID().toString();
 
-        mockMvc.perform(get("/rooms/join/" + hash))
+        mockMvc.perform(post("/rooms/join/" + hash))
                 .andExpect(status().isForbidden());
     }
 }
