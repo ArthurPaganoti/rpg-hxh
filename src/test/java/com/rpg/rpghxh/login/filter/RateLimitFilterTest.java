@@ -131,6 +131,40 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void shouldNotFilter_GetToJoinRoom_ShouldNotSkip() {
+        request.setMethod("GET");
+        request.setServletPath("/rooms/join/some-hash-uuid");
+
+        assertFalse(rateLimitFilter.shouldNotFilter(request));
+    }
+
+    @Test
+    void doFilterInternal_JoinRoom_ShouldUseNormalizedKey() throws ServletException, IOException {
+        request.setMethod("GET");
+        request.setServletPath("/rooms/join/810fe538-edc4-4687-9304-81e0317da443");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.increment("rate_limit:rooms/join:127.0.0.1")).thenReturn(1L);
+
+        rateLimitFilter.doFilterInternal(request, response, filterChain);
+
+        verify(valueOperations).increment("rate_limit:rooms/join:127.0.0.1");
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_JoinRoom_ExceedsLimit_ShouldReturn429() throws ServletException, IOException {
+        request.setMethod("GET");
+        request.setServletPath("/rooms/join/810fe538-edc4-4687-9304-81e0317da443");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.increment("rate_limit:rooms/join:127.0.0.1")).thenReturn(6L);
+
+        rateLimitFilter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(429, response.getStatus());
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
+    @Test
     void shouldNotFilter_PostToLogin_ShouldNotSkip() {
         request.setMethod("POST");
         request.setServletPath("/login");

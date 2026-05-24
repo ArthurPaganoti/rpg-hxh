@@ -8,9 +8,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,11 +29,15 @@ class RedisInviteServiceTest {
     @Mock
     private HashOperations<String, Object, Object> hashOperations;
 
+    @Mock
+    private ValueOperations<String, String> valueOperations;
+
     private RedisInviteService redisInviteService;
 
     @BeforeEach
     void setUp() {
         lenient().when(redisTemplate.opsForHash()).thenReturn(hashOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         redisInviteService = new RedisInviteService(redisTemplate);
     }
 
@@ -57,6 +63,7 @@ class RedisInviteServiceTest {
         assertNotNull(savedData.get("createdAt"));
 
         verify(redisTemplate).expire("invite:" + roomId, Duration.ofHours(8));
+        verify(valueOperations).set(eq("invite:hash:" + result), eq(roomId.toString()), eq(Duration.ofHours(8)));
     }
 
     @Test
@@ -93,9 +100,49 @@ class RedisInviteServiceTest {
     void removeInvite_ShouldDeleteKeyFromRedis() {
         UUID roomId = UUID.randomUUID();
 
+        when(hashOperations.get("invite:" + roomId, "inviteHash")).thenReturn(null);
+
         redisInviteService.removeInvite(roomId);
 
         verify(redisTemplate).delete("invite:" + roomId);
+        verify(redisTemplate, times(1)).delete(anyString());
+    }
+
+    @Test
+    void removeInvite_ShouldAlsoDeleteReverseKey_WhenHashExists() {
+        UUID roomId = UUID.randomUUID();
+        String hash = UUID.randomUUID().toString();
+
+        when(hashOperations.get("invite:" + roomId, "inviteHash")).thenReturn(hash);
+
+        redisInviteService.removeInvite(roomId);
+
+        verify(redisTemplate).delete("invite:hash:" + hash);
+        verify(redisTemplate).delete("invite:" + roomId);
+    }
+
+    @Test
+    void getRoomIdByHash_WhenHashExists_ShouldReturnRoomId() {
+        UUID roomId = UUID.randomUUID();
+        String hash = UUID.randomUUID().toString();
+
+        when(valueOperations.get("invite:hash:" + hash)).thenReturn(roomId.toString());
+
+        Optional<UUID> result = redisInviteService.getRoomIdByHash(hash);
+
+        assertTrue(result.isPresent());
+        assertEquals(roomId, result.get());
+    }
+
+    @Test
+    void getRoomIdByHash_WhenHashNotFound_ShouldReturnEmpty() {
+        String hash = UUID.randomUUID().toString();
+
+        when(valueOperations.get("invite:hash:" + hash)).thenReturn(null);
+
+        Optional<UUID> result = redisInviteService.getRoomIdByHash(hash);
+
+        assertTrue(result.isEmpty());
     }
 
     @Test

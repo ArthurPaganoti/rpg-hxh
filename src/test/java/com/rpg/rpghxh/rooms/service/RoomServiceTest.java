@@ -1,6 +1,8 @@
 package com.rpg.rpghxh.rooms.service;
 
 import com.rpg.rpghxh.entities.room.entity.Room;
+import com.rpg.rpghxh.entities.room.entity.RoomPlayer;
+import com.rpg.rpghxh.entities.room.repository.RoomPlayerRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
@@ -8,7 +10,10 @@ import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
+import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +45,9 @@ class RoomServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private RoomPlayerRepository roomPlayerRepository;
 
     @Mock
     private RedisInviteService redisInviteService;
@@ -74,8 +82,9 @@ class RoomServiceTest {
                 .name("Sala do Gon")
                 .build();
 
+        UUID roomId = UUID.randomUUID();
         Room savedRoom = Room.builder()
-                .id(UUID.randomUUID())
+                .id(roomId)
                 .name("Sala do Gon")
                 .master(masterUser)
                 .currentPlayers(1)
@@ -85,6 +94,8 @@ class RoomServiceTest {
 
         when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
         when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+        when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(savedRoom));
 
         ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
 
@@ -95,6 +106,7 @@ class RoomServiceTest {
         assertEquals("Gon Freecss", response.getContent().getMasterName());
         assertEquals(1, response.getContent().getCurrentPlayers());
         assertEquals(10, response.getContent().getMaxPlayers());
+        assertNotNull(response.getContent().getCreatedAt());
     }
 
     @Test
@@ -115,8 +127,9 @@ class RoomServiceTest {
                 .name("Sala do Mestre")
                 .build();
 
+        UUID roomId = UUID.randomUUID();
         Room savedRoom = Room.builder()
-                .id(UUID.randomUUID())
+                .id(roomId)
                 .name("Sala do Mestre")
                 .master(masterUser)
                 .currentPlayers(1)
@@ -126,6 +139,8 @@ class RoomServiceTest {
 
         when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
         when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+        when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(savedRoom));
 
         ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
 
@@ -134,6 +149,10 @@ class RoomServiceTest {
         ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
         verify(roomRepository).save(roomCaptor.capture());
         assertEquals(masterUser, roomCaptor.getValue().getMaster());
+
+        ArgumentCaptor<RoomPlayer> playerCaptor = ArgumentCaptor.forClass(RoomPlayer.class);
+        verify(roomPlayerRepository).save(playerCaptor.capture());
+        assertEquals(masterUser, playerCaptor.getValue().getUser());
     }
 
     @Test
@@ -142,8 +161,9 @@ class RoomServiceTest {
                 .name("Sala Padrao")
                 .build();
 
+        UUID roomId = UUID.randomUUID();
         Room savedRoom = Room.builder()
-                .id(UUID.randomUUID())
+                .id(roomId)
                 .name("Sala Padrao")
                 .master(masterUser)
                 .currentPlayers(1)
@@ -153,6 +173,8 @@ class RoomServiceTest {
 
         when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
         when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+        when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(savedRoom));
 
         ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
 
@@ -239,5 +261,130 @@ class RoomServiceTest {
         when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
 
         assertThrows(RoomNotFoundException.class, () -> roomService.getInviteLink(roomId));
+    }
+
+    // --- joinRoom tests ---
+
+    @Test
+    void joinRoom_ShouldAddPlayerAndReturnRoomData() {
+        String hash = UUID.randomUUID().toString();
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken("gon@hunter.com", null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Room updatedRoom = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .createdAt(room.getCreatedAt())
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(redisInviteService.getRoomIdByHash(hash)).thenReturn(Optional.of(roomId));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(false);
+        when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomRepository.save(room)).thenReturn(updatedRoom);
+
+        ResponseDTO<RoomResponseDTO> response = roomService.joinRoom(hash);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Entrou na sala com sucesso", response.getMessage());
+        assertEquals(2, response.getContent().getCurrentPlayers());
+    }
+
+    @Test
+    void joinRoom_InvalidHash_ShouldThrowInvalidInviteException() {
+        String hash = "hash-invalido";
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(redisInviteService.getRoomIdByHash(hash)).thenReturn(Optional.empty());
+
+        assertThrows(InvalidInviteException.class, () -> roomService.joinRoom(hash));
+        verify(roomRepository, never()).findById(any());
+    }
+
+    @Test
+    void joinRoom_AsMaster_ShouldThrowPlayerAlreadyInRoomException() {
+        String hash = UUID.randomUUID().toString();
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(redisInviteService.getRoomIdByHash(hash)).thenReturn(Optional.of(roomId));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(PlayerAlreadyInRoomException.class, () -> roomService.joinRoom(hash));
+        verify(roomPlayerRepository, never()).save(any());
+    }
+
+    @Test
+    void joinRoom_PlayerAlreadyInRoom_ShouldThrowPlayerAlreadyInRoomException() {
+        String hash = UUID.randomUUID().toString();
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(redisInviteService.getRoomIdByHash(hash)).thenReturn(Optional.of(roomId));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(true);
+
+        assertThrows(PlayerAlreadyInRoomException.class, () -> roomService.joinRoom(hash));
+        verify(roomPlayerRepository, never()).save(any());
+    }
+
+    @Test
+    void joinRoom_RoomFull_ShouldThrowRoomFullException() {
+        String hash = UUID.randomUUID().toString();
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(10)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(redisInviteService.getRoomIdByHash(hash)).thenReturn(Optional.of(roomId));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(false);
+
+        assertThrows(RoomFullException.class, () -> roomService.joinRoom(hash));
+        verify(roomPlayerRepository, never()).save(any());
     }
 }

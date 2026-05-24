@@ -8,7 +8,10 @@ import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.GlobalExceptionHandler;
+import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
+import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -164,6 +167,76 @@ class RoomControllerTest {
         UUID roomId = UUID.randomUUID();
 
         mockMvc.perform(get("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn200WhenPlayerJoinsRoomSuccessfully() throws Exception {
+        String hash = UUID.randomUUID().toString();
+
+        RoomResponseDTO roomResponse = RoomResponseDTO.builder()
+                .id(UUID.randomUUID())
+                .name("Sala do Gon")
+                .masterName("Gon Freecss")
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(roomService.joinRoom(hash)).thenReturn(ResponseDTO.success(roomResponse, "Entrou na sala com sucesso"));
+
+        mockMvc.perform(get("/rooms/join/" + hash))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Entrou na sala com sucesso"))
+                .andExpect(jsonPath("$.content.currentPlayers").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn404WhenInviteHashIsInvalidOrExpired() throws Exception {
+        String hash = "hash-invalido";
+
+        when(roomService.joinRoom(hash)).thenThrow(new InvalidInviteException());
+
+        mockMvc.perform(get("/rooms/join/" + hash))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn409WhenRoomIsFull() throws Exception {
+        String hash = UUID.randomUUID().toString();
+
+        when(roomService.joinRoom(hash)).thenThrow(new RoomFullException());
+
+        mockMvc.perform(get("/rooms/join/" + hash))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn409WhenPlayerAlreadyInRoom() throws Exception {
+        String hash = UUID.randomUUID().toString();
+
+        when(roomService.joinRoom(hash)).thenThrow(new PlayerAlreadyInRoomException());
+
+        mockMvc.perform(get("/rooms/join/" + hash))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyJoinRoomWhenNotAuthenticated() throws Exception {
+        String hash = UUID.randomUUID().toString();
+
+        mockMvc.perform(get("/rooms/join/" + hash))
                 .andExpect(status().isForbidden());
     }
 }
