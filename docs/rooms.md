@@ -129,16 +129,18 @@ A feature segue o padrao de **Functional Slice**:
 
 ```
 rooms/
-  controller/RoomController.java         -- Endpoints REST (POST /rooms, GET /rooms/{id}/invite)
-  service/RoomService.java               -- Logica de criacao de sala e geracao de convite
-  service/RedisInviteService.java        -- Gerenciamento de convites no Redis (TTL 8h)
+  controller/RoomController.java         -- Endpoints REST (POST /rooms, GET /rooms/{id}/invite, GET /rooms/join/{hash})
+  service/RoomService.java               -- Logica de criacao, convite e entrada na sala
+  service/RedisInviteService.java        -- Gerenciamento de convites no Redis (TTL 8h, lookup reverso)
   dto/CreateRoomDTO.java                 -- DTO de requisicao com validacoes
   dto/RoomResponseDTO.java               -- DTO de resposta com dados da sala
   dto/InviteResponseDTO.java             -- DTO de resposta com URL de convite
 
 entities/room/
   entity/Room.java                       -- Entidade JPA
+  entity/RoomPlayer.java                 -- Entidade JPA (jogadores na sala)
   repository/RoomRepository.java         -- Spring Data Repository
+  repository/RoomPlayerRepository.java   -- Spring Data Repository (existsByRoomAndUser)
 ```
 
 ### Fluxo de Criacao
@@ -183,13 +185,16 @@ RoomController retorna 200 OK + ResponseDTO.success(InviteResponseDTO)
 ### Armazenamento no Redis
 
 ```
-Chave:    invite:{roomId}
-Tipo:     Hash
+Chave:    invite:{roomId}           (Hash)
 TTL:      8 horas
 Campos:
   - inviteHash  -> UUID criptograficamente seguro
   - masterId    -> ID do Mestre que gerou o convite
   - createdAt   -> Timestamp de criacao
+
+Chave:    invite:hash:{hash}        (String — indice reverso)
+TTL:      8 horas
+Valor:    roomId (UUID como string)
 ```
 
 Se o convite ja existir no Redis (dentro do prazo de 8h), retorna o existente.
@@ -205,17 +210,72 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Master-only Invite | Apenas o Mestre pode gerar/obter o link de convite |
 | Jogadores iniciais | `current_players` inicia com 1 (o Mestre) |
 | Limite de jogadores | `max_players` padrao e 10 |
+| Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
+| Sala cheia | Retorna 409 se `current_players >= max_players` |
+| Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
+| Convite invalido | Retorna 404 se o hash nao existe ou expirou |
+
+### `GET /rooms/join/{hash}` — Entrar em uma Sala
+
+**Autenticacao**: Obrigatoria (Bearer JWT).
+
+#### Parametros
+
+| Parametro | Tipo | Local | Descricao |
+|-----------|------|-------|-----------|
+| `hash` | `String` | Path | Hash do link de convite |
+
+#### Respostas
+
+**200 OK — Entrou na sala com sucesso:**
+
+```json
+{
+  "success": true,
+  "message": "Entrou na sala com sucesso",
+  "content": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Sala do Gon",
+    "masterName": "Gon Freecss",
+    "currentPlayers": 2,
+    "maxPlayers": 10,
+    "createdAt": "2026-03-24T12:00:00"
+  }
+}
+```
+
+**404 Not Found — Convite invalido ou expirado:**
+
+```json
+{
+  "success": false,
+  "code": "BUSINESS_ERROR",
+  "message": "Convite invalido ou expirado"
+}
+```
+
+**409 Conflict — Sala cheia ou jogador ja esta na sala:**
+
+```json
+{
+  "success": false,
+  "code": "BUSINESS_ERROR",
+  "message": "A sala esta cheia"
+}
+```
+
+---
 
 ## Invite System (Sistema de Convite Seguro)
 
 O link de convite e gerado sob demanda pelo Mestre via Redis:
 - UUID criptograficamente seguro (`UUID.randomUUID()`)
-- Armazenado no Redis como Hash com TTL de 8 horas
-- Campos: `inviteHash`, `masterId`, `createdAt`
+- Armazenado no Redis como Hash com TTL de 8 horas: chave `invite:{roomId}`
+- Indice reverso com TTL de 8 horas: chave `invite:hash:{hash}` -> `roomId`
+- Campos do Hash: `inviteHash`, `masterId`, `createdAt`
 - Se ja existir no Redis, retorna o hash existente
 - Se expirou, gera novo hash automaticamente
 - URL formato: `https://api.rpg.com/rooms/join/{invite_hash}`
-- A logica de join via URL sera implementada em uma task futura
 
 ## Migracoes de Banco de Dados
 
@@ -254,10 +314,23 @@ rooms (
 )
 ```
 
+## Migracoes de Banco de Dados (completas)
+
+```sql
+-- V5__Create_Room_Players_Table.sql
+CREATE TABLE room_players (
+    id BIGSERIAL PRIMARY KEY,
+    room_id UUID NOT NULL REFERENCES rooms(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_room_players UNIQUE (room_id, user_id)
+);
+```
+
 ## Swagger
 
 A feature esta documentada no Swagger com:
 
 - **Tag**: "Salas" — Agrupa os endpoints de gerenciamento de salas
 - **Seguranca**: Requer `bearerAuth` (JWT) configurado globalmente
-- **Endpoints**: `POST /rooms`, `GET /rooms/{id}/invite`
+- **Endpoints**: `POST /rooms`, `GET /rooms/{id}/invite`, `GET /rooms/join/{hash}`
