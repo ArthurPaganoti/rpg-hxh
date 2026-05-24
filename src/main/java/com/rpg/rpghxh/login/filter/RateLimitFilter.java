@@ -65,7 +65,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         boolean isLoginOrRegister = "POST".equalsIgnoreCase(method) &&
                 ("/login".equals(path) || "/register".equals(path));
-        boolean isJoinRoom = "GET".equalsIgnoreCase(method) && path.startsWith("/rooms/join/");
+        boolean isJoinRoom = "POST".equalsIgnoreCase(method) && path.startsWith("/rooms/join/");
         return !(isLoginOrRegister || isJoinRoom);
     }
 

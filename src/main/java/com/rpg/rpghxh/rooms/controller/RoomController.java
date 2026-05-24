@@ -59,7 +59,7 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/join/{hash}")
+    @PostMapping("/join/{hash}")
     @Operation(summary = "Entrar em uma sala via convite", description = "Adiciona o jogador autenticado a uma sala usando o hash do link de convite.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Entrou na sala com sucesso",
