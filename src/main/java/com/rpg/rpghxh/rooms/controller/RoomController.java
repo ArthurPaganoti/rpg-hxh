@@ -58,4 +58,21 @@ public class RoomController {
         ResponseDTO<InviteResponseDTO> response = roomService.getInviteLink(id);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/join/{hash}")
+    @Operation(summary = "Entrar em uma sala via convite", description = "Adiciona o jogador autenticado a uma sala usando o hash do link de convite.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Entrou na sala com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Convite invalido ou expirado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "409", description = "Sala cheia ou jogador ja esta na sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "401", description = "Token JWT ausente ou invalido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<RoomResponseDTO>> joinRoom(@PathVariable String hash) {
+        ResponseDTO<RoomResponseDTO> response = roomService.joinRoom(hash);
+        return ResponseEntity.ok(response);
+    }
 }

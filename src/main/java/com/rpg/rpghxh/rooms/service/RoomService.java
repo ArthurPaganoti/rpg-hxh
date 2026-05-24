@@ -1,6 +1,8 @@
 package com.rpg.rpghxh.rooms.service;
 
 import com.rpg.rpghxh.entities.room.entity.Room;
+import com.rpg.rpghxh.entities.room.entity.RoomPlayer;
+import com.rpg.rpghxh.entities.room.repository.RoomPlayerRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
@@ -8,7 +10,10 @@ import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
+import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,13 +29,16 @@ public class RoomService {
 
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final RoomPlayerRepository roomPlayerRepository;
     private final RedisInviteService redisInviteService;
 
     public RoomService(RoomRepository roomRepository,
                        UserRepository userRepository,
+                       RoomPlayerRepository roomPlayerRepository,
                        RedisInviteService redisInviteService) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
+        this.roomPlayerRepository = roomPlayerRepository;
         this.redisInviteService = redisInviteService;
     }
 
@@ -48,9 +56,11 @@ public class RoomService {
 
         Room savedRoom = roomRepository.save(room);
 
-        RoomResponseDTO response = buildRoomResponse(savedRoom, master);
+        roomPlayerRepository.save(RoomPlayer.builder().room(savedRoom).user(master).build());
 
-        return ResponseDTO.success(response, "Sala criada com sucesso");
+        Room reloadedRoom = roomRepository.findById(savedRoom.getId()).orElse(savedRoom);
+
+        return ResponseDTO.success(buildRoomResponse(reloadedRoom, master), "Sala criada com sucesso");
     }
 
     public ResponseDTO<InviteResponseDTO> getInviteLink(UUID roomId) {
@@ -73,6 +83,39 @@ public class RoomService {
                 .build();
 
         return ResponseDTO.success(response, "Link de convite gerado com sucesso");
+    }
+
+    @Transactional
+    public ResponseDTO<RoomResponseDTO> joinRoom(String hash) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+
+        UUID roomId = redisInviteService.getRoomIdByHash(hash)
+                .orElseThrow(InvalidInviteException::new);
+
+        Room room = roomRepository.findByIdWithLock(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (room.getMaster().getId().equals(user.getId())) {
+            throw new PlayerAlreadyInRoomException();
+        }
+
+        if (roomPlayerRepository.existsByRoomAndUser(room, user)) {
+            throw new PlayerAlreadyInRoomException();
+        }
+
+        if (room.getCurrentPlayers() >= room.getMaxPlayers()) {
+            throw new RoomFullException();
+        }
+
+        roomPlayerRepository.save(RoomPlayer.builder().room(room).user(user).build());
+
+        room.setCurrentPlayers(room.getCurrentPlayers() + 1);
+        Room updatedRoom = roomRepository.save(room);
+
+        return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
     }
 
     private RoomResponseDTO buildRoomResponse(Room room, User master) {
