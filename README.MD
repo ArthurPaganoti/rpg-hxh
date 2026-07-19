@@ -232,8 +232,7 @@ Campos `null` são omitidos automaticamente do JSON.
 ### Pré-requisitos
 
 - **Java 21**
-- **PostgreSQL 15+**
-- **Redis 7+**
+- **PostgreSQL 15+** e **Redis 7+** — ou **Docker + Docker Compose** para subir ambos automaticamente
 
 ### 1. Clone o repositório
 
@@ -269,7 +268,22 @@ JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
 
 > O carregamento das variáveis é feito automaticamente pelo `DotenvConfig`, que injeta o `.env` como property source do Spring com prioridade máxima.
 
-### 3. Execute a aplicação
+### 3. Suba a infraestrutura (PostgreSQL + Redis) com Docker
+
+```bash
+docker compose up -d
+```
+
+O `docker-compose.yml` lê as variáveis do `.env` e sobe:
+
+| Serviço | Imagem | Porta |
+|---------|--------|-------|
+| PostgreSQL | `postgres:15-alpine` | `${DB_PORT}` (padrão 5432) |
+| Redis | `redis:7-alpine` (AOF habilitado) | `${REDIS_PORT}` (padrão 6379) |
+
+Ambos possuem healthcheck e volumes persistentes. Se preferir instalações locais de PostgreSQL e Redis, pule este passo.
+
+### 4. Execute a aplicação
 
 ```bash
 # Build do projeto
@@ -285,7 +299,7 @@ JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
 ./gradlew clean build
 ```
 
-### 4. Acesse a documentação
+### 5. Acesse a documentação
 
 | Recurso | URL |
 |---------|-----|
@@ -318,6 +332,7 @@ JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
 | [`docs/register.md`](docs/register.md) | Detalhes técnicos do fluxo de registro de usuário |
 | [`docs/authentication.md`](docs/authentication.md) | Sistema de login, JWT, sessões Redis e rate limiting |
 | [`docs/rooms.md`](docs/rooms.md) | Criação de salas, regras de negócio e invite code |
+| [`graphify-out/GRAPH_REPORT.md`](graphify-out/GRAPH_REPORT.md) | Grafo de conhecimento do código (nós centrais, comunidades e conexões) — visualização interativa em `graphify-out/graph.html` |
 
 ---
 
