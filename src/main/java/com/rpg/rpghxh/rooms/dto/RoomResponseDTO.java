@@ -1,5 +1,6 @@
 package com.rpg.rpghxh.rooms.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,4 +21,7 @@ public class RoomResponseDTO {
     private int currentPlayers;
     private int maxPlayers;
     private LocalDateTime createdAt;
+
+    @JsonProperty("isMaster")
+    private boolean isMaster;
 }

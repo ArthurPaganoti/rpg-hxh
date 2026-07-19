@@ -12,6 +12,7 @@ import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
@@ -109,24 +110,32 @@ public class RoomService {
         room.setCurrentPlayers((int) roomPlayerRepository.countByRoom(room));
         Room updatedRoom = roomRepository.save(room);
 
-        return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
+        return ResponseDTO.success(buildRoomResponse(updatedRoom, user), "Entrou na sala com sucesso");
     }
 
     public ResponseDTO<List<RoomResponseDTO>> listMyRooms() {
         User user = getAuthenticatedUser();
 
         List<RoomResponseDTO> rooms = roomPlayerRepository.findRoomsByUser(user).stream()
-                .map(room -> buildRoomResponse(room, room.getMaster()))
+                .map(room -> buildRoomResponse(room, user))
                 .toList();
 
         return ResponseDTO.success(rooms, "Salas listadas com sucesso");
     }
 
     @Transactional
-    public ResponseDTO<RoomResponseDTO> updateRoomName(UUID roomId, UpdateRoomDTO dto) {
+    public ResponseDTO<RoomResponseDTO> updateRoom(UUID roomId, UpdateRoomDTO dto) {
         Room room = findRoomAsMaster(roomId);
 
         room.setName(dto.getName());
+
+        if (dto.getMaxPlayers() != null) {
+            if (dto.getMaxPlayers() < room.getCurrentPlayers()) {
+                throw new MaxPlayersBelowCurrentException();
+            }
+            room.setMaxPlayers(dto.getMaxPlayers());
+        }
+
         Room updatedRoom = roomRepository.save(room);
 
         return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Sala atualizada com sucesso");
@@ -167,14 +176,15 @@ public class RoomService {
         return room;
     }
 
-    private RoomResponseDTO buildRoomResponse(Room room, User master) {
+    private RoomResponseDTO buildRoomResponse(Room room, User requester) {
         return RoomResponseDTO.builder()
                 .id(room.getId())
                 .name(room.getName())
-                .masterName(master.getName())
+                .masterName(room.getMaster().getName())
                 .currentPlayers(room.getCurrentPlayers())
                 .maxPlayers(room.getMaxPlayers())
                 .createdAt(room.getCreatedAt())
+                .isMaster(room.getMaster().getId().equals(requester.getId()))
                 .build();
     }
 }

@@ -75,7 +75,7 @@ public class RoomController {
     }
 
     @PatchMapping("/{id}")
-    @Operation(summary = "Atualizar nome da sala", description = "Atualiza o nome da sala. Apenas o Mestre da sala pode atualizar.")
+    @Operation(summary = "Atualizar sala", description = "Atualiza o nome e, opcionalmente, o numero maximo de jogadores da sala. Apenas o Mestre da sala pode atualizar.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Sala atualizada com sucesso",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
@@ -84,11 +84,13 @@ public class RoomController {
         @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode atualizar a sala",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
         @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "409", description = "Maximo de jogadores menor que o numero atual de jogadores",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
     })
-    public ResponseEntity<ResponseDTO<RoomResponseDTO>> updateRoomName(@PathVariable UUID id,
-                                                                       @Valid @RequestBody UpdateRoomDTO dto) {
-        ResponseDTO<RoomResponseDTO> response = roomService.updateRoomName(id, dto);
+    public ResponseEntity<ResponseDTO<RoomResponseDTO>> updateRoom(@PathVariable UUID id,
+                                                                   @Valid @RequestBody UpdateRoomDTO dto) {
+        ResponseDTO<RoomResponseDTO> response = roomService.updateRoom(id, dto);
         return ResponseEntity.ok(response);
     }
 

@@ -23,7 +23,7 @@ public class CreateRoomDTO {
     private String name;
 
     @Min(value = 2, message = "A sala deve permitir no minimo 2 jogadores")
-    @Max(value = 20, message = "A sala deve permitir no maximo 20 jogadores")
+    @Max(value = 10, message = "A sala deve permitir no maximo 10 jogadores")
     @Schema(description = "Numero maximo de jogadores (opcional, padrao 10)", example = "10")
     private Integer maxPlayers;
 }
