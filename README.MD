@@ -171,9 +171,10 @@ Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Req
 ```
 
 **Regras:**
-- `name` — Obrigatório (`@NotBlank`)
+- `name` — Obrigatório, entre 3 e 100 caracteres
+- `maxPlayers` — Opcional, entre 2 e 20 (padrão 10)
 - O usuário autenticado se torna o Mestre (`master_id`)
-- `currentPlayers` inicia com 1 (o Mestre), `maxPlayers` padrão é 10
+- `currentPlayers` inicia com 1 (o Mestre)
 
 ---
 
@@ -200,6 +201,20 @@ Gera ou recupera o link de convite da sala. **Apenas o Mestre** da sala pode ace
 - Validade de 8 horas — após expirar, um novo link é gerado automaticamente
 
 > Documentação completa: [`docs/rooms.md`](docs/rooms.md)
+
+---
+
+### `PATCH /rooms/{id}` — Atualizar Nome da Sala
+
+Atualiza o nome da sala. **Apenas o Mestre** pode atualizar (403 para outros usuários). O nome segue as mesmas validações da criação (3 a 100 caracteres).
+
+**Request:**
+
+```json
+{
+  "name": "Sala do Gon Renovada"
+}
+```
 
 ---
 

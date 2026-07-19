@@ -23,7 +23,8 @@ O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG
 
 | Campo | Tipo | Obrigatorio | Regras de Validacao |
 |-------|------|-------------|---------------------|
-| `name` | `String` | Sim | Nao pode ser vazio (`@NotBlank`) |
+| `name` | `String` | Sim | Nao pode ser vazio (`@NotBlank`); entre 3 e 100 caracteres (`@Size`) |
+| `maxPlayers` | `Integer` | Nao | Entre 2 e 20 (`@Min`/`@Max`); quando omitido, padrao 10 |
 
 #### Exemplo
 
@@ -120,6 +121,40 @@ Retornado quando o token JWT esta ausente ou invalido.
   "timestamp": "2026-03-28T15:00:00Z"
 }
 ```
+
+---
+
+### `PATCH /rooms/{id}` — Atualizar Nome da Sala
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode atualizar (validado via `findRoomAsMaster`).
+
+#### Body (`UpdateRoomDTO`)
+
+| Campo | Tipo | Obrigatorio | Regras de Validacao |
+|-------|------|-------------|---------------------|
+| `name` | `String` | Sim | Nao pode ser vazio (`@NotBlank`); entre 3 e 100 caracteres (`@Size`) |
+
+#### Respostas
+
+**200 OK — Sala Atualizada:**
+
+```json
+{
+  "success": true,
+  "message": "Sala atualizada com sucesso",
+  "content": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Sala do Gon Renovada",
+    "masterName": "Gon Freecss",
+    "currentPlayers": 1,
+    "maxPlayers": 10,
+    "createdAt": "2026-03-24T12:00:00"
+  },
+  "timestamp": "2026-07-19T15:00:00Z"
+}
+```
+
+**400 Bad Request** (`VALIDATION_ERROR`), **403 Forbidden** e **404 Not Found** (`BUSINESS_ERROR`): mesmo formato dos endpoints anteriores.
 
 ---
 
@@ -243,7 +278,8 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Master-only Invite | Apenas o Mestre pode gerar/obter o link de convite |
 | Jogadores iniciais | `current_players` inicia com 1 (o Mestre) |
 | Contagem de jogadores | Apos cada join, `current_players` e recalculado via `COUNT(room_players)` (fonte de verdade e a tabela `room_players`, nao o contador manual) |
-| Limite de jogadores | `max_players` padrao e 10 |
+| Limite de jogadores | `max_players` configuravel na criacao (2 a 20); padrao 10 quando omitido |
+| Atualizacao de nome | Apenas o Mestre atualiza (`findRoomAsMaster`); nome entre 3 e 100 caracteres |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
 | Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
