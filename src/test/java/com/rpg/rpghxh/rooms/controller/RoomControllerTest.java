@@ -248,6 +248,47 @@ class RoomControllerTest {
 
     @Test
     @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnMyRoomsList() throws Exception {
+        RoomResponseDTO room = RoomResponseDTO.builder()
+                .id(UUID.randomUUID())
+                .name("Sala do Gon")
+                .masterName("Gon Freecss")
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(roomService.listMyRooms())
+                .thenReturn(ResponseDTO.success(java.util.List.of(room), "Salas listadas com sucesso"));
+
+        mockMvc.perform(get("/rooms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Salas listadas com sucesso"))
+                .andExpect(jsonPath("$.content[0].name").value("Sala do Gon"))
+                .andExpect(jsonPath("$.content[0].currentPlayers").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnEmptyListWhenUserHasNoRooms() throws Exception {
+        when(roomService.listMyRooms())
+                .thenReturn(ResponseDTO.success(java.util.List.of(), "Salas listadas com sucesso"));
+
+        mockMvc.perform(get("/rooms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.content").isEmpty());
+    }
+
+    @Test
+    void shouldDenyListRoomsWhenNotAuthenticated() throws Exception {
+        mockMvc.perform(get("/rooms"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
     void shouldReturn200WhenMasterUpdatesRoomName() throws Exception {
         UUID roomId = UUID.randomUUID();
 

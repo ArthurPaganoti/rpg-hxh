@@ -399,6 +399,58 @@ class RoomServiceTest {
     }
 
     @Test
+    void listMyRooms_ShouldReturnRoomsOrderedFromRepository() {
+        Room room1 = Room.builder()
+                .id(UUID.randomUUID())
+                .name("Sala Nova")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Room room2 = Room.builder()
+                .id(UUID.randomUUID())
+                .name("Sala Antiga")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now().minusDays(1))
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomPlayerRepository.findRoomsByUser(masterUser)).thenReturn(List.of(room1, room2));
+
+        ResponseDTO<List<RoomResponseDTO>> response = roomService.listMyRooms();
+
+        assertTrue(response.isSuccess());
+        assertEquals("Salas listadas com sucesso", response.getMessage());
+        assertEquals(2, response.getContent().size());
+        assertEquals("Sala Nova", response.getContent().get(0).getName());
+        assertEquals("Sala Antiga", response.getContent().get(1).getName());
+        assertEquals("Gon Freecss", response.getContent().get(0).getMasterName());
+    }
+
+    @Test
+    void listMyRooms_WithNoRooms_ShouldReturnEmptyList() {
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomPlayerRepository.findRoomsByUser(masterUser)).thenReturn(List.of());
+
+        ResponseDTO<List<RoomResponseDTO>> response = roomService.listMyRooms();
+
+        assertTrue(response.isSuccess());
+        assertTrue(response.getContent().isEmpty());
+    }
+
+    @Test
+    void listMyRooms_UserNotFound_ShouldThrowUserNotFoundException() {
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> roomService.listMyRooms());
+        verify(roomPlayerRepository, never()).findRoomsByUser(any());
+    }
+
+    @Test
     void updateRoomName_AsMaster_ShouldUpdateAndReturnRoomData() {
         UUID roomId = UUID.randomUUID();
 
