@@ -264,6 +264,9 @@ REDIS_DATABASE=0
 
 # JWT
 JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
+
+# Invite Links
+INVITE_BASE_URL=http://localhost:8080/rooms/join/
 ```
 
 > O carregamento das variáveis é feito automaticamente pelo `DotenvConfig`, que injeta o `.env` como property source do Spring com prioridade máxima.
