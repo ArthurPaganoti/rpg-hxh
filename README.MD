@@ -172,7 +172,7 @@ Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Req
 
 **Regras:**
 - `name` — Obrigatório, entre 3 e 100 caracteres
-- `maxPlayers` — Opcional, entre 2 e 20 (padrão 10)
+- `maxPlayers` — Opcional, entre 2 e 10 (padrão 10)
 - O usuário autenticado se torna o Mestre (`master_id`)
 - `currentPlayers` inicia com 1 (o Mestre)
 
@@ -212,7 +212,7 @@ Lista todas as salas em que o usuário autenticado participa (como Mestre ou jog
 
 ### `PATCH /rooms/{id}` — Atualizar Nome da Sala
 
-Atualiza o nome da sala. **Apenas o Mestre** pode atualizar (403 para outros usuários). O nome segue as mesmas validações da criação (3 a 100 caracteres).
+Atualiza o nome e, opcionalmente, o máximo de jogadores da sala. **Apenas o Mestre** pode atualizar (403 para outros usuários). O máximo não pode ficar menor que o número atual de jogadores (409).
 
 **Request:**
 

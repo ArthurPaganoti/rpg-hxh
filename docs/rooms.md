@@ -24,7 +24,7 @@ O fluxo de criacao de salas permite que usuarios autenticados criem salas de RPG
 | Campo | Tipo | Obrigatorio | Regras de Validacao |
 |-------|------|-------------|---------------------|
 | `name` | `String` | Sim | Nao pode ser vazio (`@NotBlank`); entre 3 e 100 caracteres (`@Size`) |
-| `maxPlayers` | `Integer` | Nao | Entre 2 e 20 (`@Min`/`@Max`); quando omitido, padrao 10 |
+| `maxPlayers` | `Integer` | Nao | Entre 2 e 10 (`@Min`/`@Max`); quando omitido, padrao 10 |
 
 #### Exemplo
 
@@ -165,6 +165,9 @@ Usuario sem salas recebe `content: []`.
 | Campo | Tipo | Obrigatorio | Regras de Validacao |
 |-------|------|-------------|---------------------|
 | `name` | `String` | Sim | Nao pode ser vazio (`@NotBlank`); entre 3 e 100 caracteres (`@Size`) |
+| `maxPlayers` | `Integer` | Nao | Entre 2 e 10 (`@Min`/`@Max`); nao pode ser menor que `current_players` (409 `MaxPlayersBelowCurrentException`) |
+
+O `RoomResponseDTO` inclui `isMaster` (calculado por requisicao), usado pelo frontend para exibir acoes de Mestre.
 
 #### Respostas
 
@@ -310,7 +313,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Master-only Invite | Apenas o Mestre pode gerar/obter o link de convite |
 | Jogadores iniciais | `current_players` inicia com 1 (o Mestre) |
 | Contagem de jogadores | Apos cada join, `current_players` e recalculado via `COUNT(room_players)` (fonte de verdade e a tabela `room_players`, nao o contador manual) |
-| Limite de jogadores | `max_players` configuravel na criacao (2 a 20); padrao 10 quando omitido |
+| Limite de jogadores | `max_players` configuravel na criacao (2 a 10); padrao 10 quando omitido |
 | Atualizacao de nome | Apenas o Mestre atualiza (`findRoomAsMaster`); nome entre 3 e 100 caracteres |
 | Listagem de salas | `GET /rooms` retorna as salas do usuario autenticado (Mestre ou jogador), ordenadas por criacao decrescente |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
