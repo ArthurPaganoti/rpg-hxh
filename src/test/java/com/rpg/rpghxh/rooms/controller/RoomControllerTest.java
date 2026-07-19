@@ -301,7 +301,7 @@ class RoomControllerTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(roomService.updateRoomName(eq(roomId), any()))
+        when(roomService.updateRoom(eq(roomId), any()))
                 .thenReturn(ResponseDTO.success(roomResponse, "Sala atualizada com sucesso"));
 
         mockMvc.perform(patch("/rooms/" + roomId)
@@ -331,7 +331,7 @@ class RoomControllerTest {
     void shouldReturn403WhenNonMasterUpdatesRoomName() throws Exception {
         UUID roomId = UUID.randomUUID();
 
-        when(roomService.updateRoomName(eq(roomId), any()))
+        when(roomService.updateRoom(eq(roomId), any()))
                 .thenThrow(new RoomAccessDeniedException());
 
         mockMvc.perform(patch("/rooms/" + roomId)
@@ -347,7 +347,7 @@ class RoomControllerTest {
     void shouldReturn404WhenUpdatingNonexistentRoom() throws Exception {
         UUID roomId = UUID.randomUUID();
 
-        when(roomService.updateRoomName(eq(roomId), any()))
+        when(roomService.updateRoom(eq(roomId), any()))
                 .thenThrow(new RoomNotFoundException());
 
         mockMvc.perform(patch("/rooms/" + roomId)

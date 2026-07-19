@@ -12,6 +12,7 @@ import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
@@ -371,7 +372,7 @@ class RoomServiceTest {
     void createRoom_WithCustomMaxPlayers_ShouldUseProvidedValue() {
         CreateRoomDTO dto = CreateRoomDTO.builder()
                 .name("Sala Grande")
-                .maxPlayers(15)
+                .maxPlayers(8)
                 .build();
 
         UUID roomId = UUID.randomUUID();
@@ -380,7 +381,7 @@ class RoomServiceTest {
                 .name("Sala Grande")
                 .master(masterUser)
                 .currentPlayers(1)
-                .maxPlayers(15)
+                .maxPlayers(8)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -391,11 +392,11 @@ class RoomServiceTest {
 
         ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
 
-        assertEquals(15, response.getContent().getMaxPlayers());
+        assertEquals(8, response.getContent().getMaxPlayers());
 
         ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
         verify(roomRepository).save(roomCaptor.capture());
-        assertEquals(15, roomCaptor.getValue().getMaxPlayers());
+        assertEquals(8, roomCaptor.getValue().getMaxPlayers());
     }
 
     @Test
@@ -471,7 +472,7 @@ class RoomServiceTest {
         when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
         when(roomRepository.save(room)).thenReturn(room);
 
-        ResponseDTO<RoomResponseDTO> response = roomService.updateRoomName(roomId, dto);
+        ResponseDTO<RoomResponseDTO> response = roomService.updateRoom(roomId, dto);
 
         assertTrue(response.isSuccess());
         assertEquals("Sala atualizada com sucesso", response.getMessage());
@@ -508,7 +509,7 @@ class RoomServiceTest {
         when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(otherUser));
         when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
 
-        assertThrows(RoomAccessDeniedException.class, () -> roomService.updateRoomName(roomId, dto));
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.updateRoom(roomId, dto));
         verify(roomRepository, never()).save(any(Room.class));
     }
 
@@ -523,7 +524,59 @@ class RoomServiceTest {
         when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
         when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
 
-        assertThrows(RoomNotFoundException.class, () -> roomService.updateRoomName(roomId, dto));
+        assertThrows(RoomNotFoundException.class, () -> roomService.updateRoom(roomId, dto));
+        verify(roomRepository, never()).save(any(Room.class));
+    }
+
+    @Test
+    void updateRoom_WithMaxPlayers_ShouldUpdateBothFields() {
+        UUID roomId = UUID.randomUUID();
+
+        UpdateRoomDTO dto = UpdateRoomDTO.builder()
+                .name("Sala Maior")
+                .maxPlayers(8)
+                .build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(3)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomRepository.save(room)).thenReturn(room);
+
+        ResponseDTO<RoomResponseDTO> response = roomService.updateRoom(roomId, dto);
+
+        assertEquals("Sala Maior", response.getContent().getName());
+        assertEquals(8, response.getContent().getMaxPlayers());
+    }
+
+    @Test
+    void updateRoom_MaxPlayersBelowCurrent_ShouldThrowMaxPlayersBelowCurrentException() {
+        UUID roomId = UUID.randomUUID();
+
+        UpdateRoomDTO dto = UpdateRoomDTO.builder()
+                .name("Sala Encolhida")
+                .maxPlayers(2)
+                .build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(5)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(MaxPlayersBelowCurrentException.class, () -> roomService.updateRoom(roomId, dto));
         verify(roomRepository, never()).save(any(Room.class));
     }
 
