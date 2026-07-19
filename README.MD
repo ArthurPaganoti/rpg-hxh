@@ -204,6 +204,12 @@ Gera ou recupera o link de convite da sala. **Apenas o Mestre** da sala pode ace
 
 ---
 
+### `GET /rooms` — Listar Minhas Salas
+
+Lista todas as salas em que o usuário autenticado participa (como Mestre ou jogador), ordenadas da mais recente para a mais antiga. Retorna `content: []` quando o usuário não tem salas.
+
+---
+
 ### `PATCH /rooms/{id}` — Atualizar Nome da Sala
 
 Atualiza o nome da sala. **Apenas o Mestre** pode atualizar (403 para outros usuários). O nome segue as mesmas validações da criação (3 a 100 caracteres).

@@ -124,6 +124,38 @@ Retornado quando o token JWT esta ausente ou invalido.
 
 ---
 
+### `GET /rooms` — Listar Minhas Salas
+
+**Autenticacao**: Obrigatoria (Bearer JWT).
+
+Lista todas as salas em que o usuario autenticado participa — como Mestre ou como jogador — ordenadas da mais recente para a mais antiga. Como o Mestre tambem e registrado em `room_players` na criacao, uma unica query cobre os dois papeis (`findRoomsByUser`, com `JOIN FETCH` do Mestre para evitar N+1).
+
+#### Respostas
+
+**200 OK:**
+
+```json
+{
+  "success": true,
+  "message": "Salas listadas com sucesso",
+  "content": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Sala do Gon",
+      "masterName": "Gon Freecss",
+      "currentPlayers": 2,
+      "maxPlayers": 10,
+      "createdAt": "2026-03-24T12:00:00"
+    }
+  ],
+  "timestamp": "2026-07-19T15:00:00Z"
+}
+```
+
+Usuario sem salas recebe `content: []`.
+
+---
+
 ### `PATCH /rooms/{id}` — Atualizar Nome da Sala
 
 **Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode atualizar (validado via `findRoomAsMaster`).
@@ -280,6 +312,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Contagem de jogadores | Apos cada join, `current_players` e recalculado via `COUNT(room_players)` (fonte de verdade e a tabela `room_players`, nao o contador manual) |
 | Limite de jogadores | `max_players` configuravel na criacao (2 a 20); padrao 10 quando omitido |
 | Atualizacao de nome | Apenas o Mestre atualiza (`findRoomAsMaster`); nome entre 3 e 100 caracteres |
+| Listagem de salas | `GET /rooms` retorna as salas do usuario autenticado (Mestre ou jogador), ordenadas por criacao decrescente |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
 | Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
