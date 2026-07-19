@@ -59,6 +59,21 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Deletar sala", description = "Deleta a sala, removendo todos os jogadores e o convite ativo no Redis. Apenas o Mestre da sala pode deletar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Sala deletada com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode deletar a sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> deleteRoom(@PathVariable UUID id) {
+        ResponseDTO<Void> response = roomService.deleteRoom(id);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/join/{hash}")
     @Operation(summary = "Entrar em uma sala via convite", description = "Adiciona o jogador autenticado a uma sala usando o hash do link de convite.")
     @ApiResponses(value = {

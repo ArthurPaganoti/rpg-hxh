@@ -105,6 +105,17 @@ public class RoomService {
         return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
     }
 
+    @Transactional
+    public ResponseDTO<Void> deleteRoom(UUID roomId) {
+        Room room = findRoomAsMaster(roomId);
+
+        redisInviteService.removeInvite(roomId);
+        roomPlayerRepository.deleteByRoom(room);
+        roomRepository.delete(room);
+
+        return ResponseDTO.success("Sala deletada com sucesso");
+    }
+
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
