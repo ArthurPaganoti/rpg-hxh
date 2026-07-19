@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -43,6 +44,19 @@ public class RoomController {
     public ResponseEntity<ResponseDTO<RoomResponseDTO>> createRoom(@Valid @RequestBody CreateRoomDTO dto) {
         ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping
+    @Operation(summary = "Listar minhas salas", description = "Lista todas as salas em que o usuario autenticado participa, como Mestre ou jogador, ordenadas da mais recente para a mais antiga.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Salas listadas com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "401", description = "Token JWT ausente ou invalido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<List<RoomResponseDTO>>> listMyRooms() {
+        ResponseDTO<List<RoomResponseDTO>> response = roomService.listMyRooms();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/invite")

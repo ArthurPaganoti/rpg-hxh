@@ -23,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -109,6 +110,16 @@ public class RoomService {
         Room updatedRoom = roomRepository.save(room);
 
         return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
+    }
+
+    public ResponseDTO<List<RoomResponseDTO>> listMyRooms() {
+        User user = getAuthenticatedUser();
+
+        List<RoomResponseDTO> rooms = roomPlayerRepository.findRoomsByUser(user).stream()
+                .map(room -> buildRoomResponse(room, room.getMaster()))
+                .toList();
+
+        return ResponseDTO.success(rooms, "Salas listadas com sucesso");
     }
 
     @Transactional
