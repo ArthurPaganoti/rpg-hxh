@@ -41,3 +41,7 @@ out/
 ### Application Config ###
 src/main/resources/application.yaml
 .env
+### Graphify (machine-specific internals) ###
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/cache/
