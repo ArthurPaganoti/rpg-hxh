@@ -174,7 +174,7 @@ RoomController GET /rooms/{id}/invite
 RoomService.getInviteLink(roomId)
   |  1. findRoomAsMaster(roomId) — valida autenticacao e mastership
   |  2. Delega para RedisInviteService.getOrCreateInvite()
-  |  3. Retorna URL: https://api.rpg.com/rooms/join/{invite_hash}
+  |  3. Retorna URL: {INVITE_BASE_URL}{invite_hash} (base configuravel via .env)
   v
 RoomController retorna 200 OK + ResponseDTO.success(InviteResponseDTO)
 ```
@@ -185,7 +185,7 @@ O `RoomService` centraliza a autorizacao em dois helpers privados, reutilizados 
 
 | Helper | Responsabilidade |
 |--------|------------------|
-| `getAuthenticatedUser()` | Extrai o email do `SecurityContextHolder` e busca o usuario (`UserNotFoundException` se nao encontrado) |
+| `getAuthenticatedUser()` | Valida que ha `Authentication` no `SecurityContextHolder` (guard contra NPE), extrai o email e busca o usuario (`UserNotFoundException` se nao encontrado) |
 | `findRoomAsMaster(UUID roomId)` | Chama `getAuthenticatedUser()`, busca a sala (`RoomNotFoundException` 404) e valida que o usuario autenticado e o Mestre (`RoomAccessDeniedException` 403) |
 
 **Regra:** toda nova rota restrita ao Mestre (deletar sala, atualizar nome, expulsar/banir membros, convite por email) **deve** reutilizar `findRoomAsMaster` em vez de duplicar a verificacao.
@@ -217,6 +217,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Invite Link | Link de convite gerado sob demanda via `GET /rooms/{id}/invite` (Redis, TTL 8h) |
 | Master-only Invite | Apenas o Mestre pode gerar/obter o link de convite |
 | Jogadores iniciais | `current_players` inicia com 1 (o Mestre) |
+| Contagem de jogadores | Apos cada join, `current_players` e recalculado via `COUNT(room_players)` (fonte de verdade e a tabela `room_players`, nao o contador manual) |
 | Limite de jogadores | `max_players` padrao e 10 |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
@@ -283,7 +284,7 @@ O link de convite e gerado sob demanda pelo Mestre via Redis:
 - Campos do Hash: `inviteHash`, `masterId`, `createdAt`
 - Se ja existir no Redis, retorna o hash existente
 - Se expirou, gera novo hash automaticamente
-- URL formato: `https://api.rpg.com/rooms/join/{invite_hash}`
+- URL formato: `{INVITE_BASE_URL}{invite_hash}` — a base e configuravel via variavel `INVITE_BASE_URL` no `.env` (padrao: `https://api.rpg.com/rooms/join/`)
 
 ## Migracoes de Banco de Dados
 
