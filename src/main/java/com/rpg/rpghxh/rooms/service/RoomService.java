@@ -44,10 +44,7 @@ public class RoomService {
 
     @Transactional
     public ResponseDTO<RoomResponseDTO> createRoom(CreateRoomDTO dto) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        User master = userRepository.findByEmail(email)
-                .orElseThrow(UserNotFoundException::new);
+        User master = getAuthenticatedUser();
 
         Room room = Room.builder()
                 .name(dto.getName())
@@ -64,19 +61,9 @@ public class RoomService {
     }
 
     public ResponseDTO<InviteResponseDTO> getInviteLink(UUID roomId) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Room room = findRoomAsMaster(roomId);
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(UserNotFoundException::new);
-
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(RoomNotFoundException::new);
-
-        if (!room.getMaster().getId().equals(user.getId())) {
-            throw new RoomAccessDeniedException();
-        }
-
-        String inviteHash = redisInviteService.getOrCreateInvite(roomId, user.getId());
+        String inviteHash = redisInviteService.getOrCreateInvite(roomId, room.getMaster().getId());
 
         InviteResponseDTO response = InviteResponseDTO.builder()
                 .inviteUrl(INVITE_BASE_URL + inviteHash)
@@ -87,10 +74,7 @@ public class RoomService {
 
     @Transactional
     public ResponseDTO<RoomResponseDTO> joinRoom(String hash) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(UserNotFoundException::new);
+        User user = getAuthenticatedUser();
 
         UUID roomId = redisInviteService.getRoomIdByHash(hash)
                 .orElseThrow(InvalidInviteException::new);
@@ -116,6 +100,26 @@ public class RoomService {
         Room updatedRoom = roomRepository.save(room);
 
         return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
+    }
+
+    private User getAuthenticatedUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+    }
+
+    private Room findRoomAsMaster(UUID roomId) {
+        User user = getAuthenticatedUser();
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (!room.getMaster().getId().equals(user.getId())) {
+            throw new RoomAccessDeniedException();
+        }
+
+        return room;
     }
 
     private RoomResponseDTO buildRoomResponse(Room room, User master) {
