@@ -9,6 +9,7 @@ import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
+import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
@@ -49,10 +50,15 @@ public class RoomService {
     public ResponseDTO<RoomResponseDTO> createRoom(CreateRoomDTO dto) {
         User master = getAuthenticatedUser();
 
-        Room room = Room.builder()
+        Room.RoomBuilder roomBuilder = Room.builder()
                 .name(dto.getName())
-                .master(master)
-                .build();
+                .master(master);
+
+        if (dto.getMaxPlayers() != null) {
+            roomBuilder.maxPlayers(dto.getMaxPlayers());
+        }
+
+        Room room = roomBuilder.build();
 
         Room savedRoom = roomRepository.save(room);
 
@@ -103,6 +109,16 @@ public class RoomService {
         Room updatedRoom = roomRepository.save(room);
 
         return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
+    }
+
+    @Transactional
+    public ResponseDTO<RoomResponseDTO> updateRoomName(UUID roomId, UpdateRoomDTO dto) {
+        Room room = findRoomAsMaster(roomId);
+
+        room.setName(dto.getName());
+        Room updatedRoom = roomRepository.save(room);
+
+        return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Sala atualizada com sucesso");
     }
 
     @Transactional

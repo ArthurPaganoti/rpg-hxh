@@ -3,6 +3,7 @@ package com.rpg.rpghxh.rooms.controller;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
+import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,6 +57,24 @@ public class RoomController {
     })
     public ResponseEntity<ResponseDTO<InviteResponseDTO>> getInviteLink(@PathVariable UUID id) {
         ResponseDTO<InviteResponseDTO> response = roomService.getInviteLink(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Atualizar nome da sala", description = "Atualiza o nome da sala. Apenas o Mestre da sala pode atualizar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Sala atualizada com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Erro de validacao: nome invalido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode atualizar a sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<RoomResponseDTO>> updateRoomName(@PathVariable UUID id,
+                                                                       @Valid @RequestBody UpdateRoomDTO dto) {
+        ResponseDTO<RoomResponseDTO> response = roomService.updateRoomName(id, dto);
         return ResponseEntity.ok(response);
     }
 
