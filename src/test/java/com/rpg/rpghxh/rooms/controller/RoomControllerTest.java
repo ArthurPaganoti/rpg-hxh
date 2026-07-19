@@ -31,9 +31,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -231,6 +233,98 @@ class RoomControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnValidationErrorWhenMaxPlayersIsOutOfRange() throws Exception {
+        mockMvc.perform(post("/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Sala do Gon\", \"maxPlayers\": 50}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.content.maxPlayers").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterUpdatesRoomName() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        RoomResponseDTO roomResponse = RoomResponseDTO.builder()
+                .id(roomId)
+                .name("Sala Renovada")
+                .masterName("Gon Freecss")
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(roomService.updateRoomName(eq(roomId), any()))
+                .thenReturn(ResponseDTO.success(roomResponse, "Sala atualizada com sucesso"));
+
+        mockMvc.perform(patch("/rooms/" + roomId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Sala Renovada\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Sala atualizada com sucesso"))
+                .andExpect(jsonPath("$.content.name").value("Sala Renovada"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnValidationErrorWhenUpdateNameIsTooShort() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(patch("/rooms/" + roomId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"ab\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.content.name").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterUpdatesRoomName() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.updateRoomName(eq(roomId), any()))
+                .thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(patch("/rooms/" + roomId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Sala Invadida\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenUpdatingNonexistentRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.updateRoomName(eq(roomId), any()))
+                .thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(patch("/rooms/" + roomId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Sala Fantasma\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyUpdateRoomWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(patch("/rooms/" + roomId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Sala Renovada\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

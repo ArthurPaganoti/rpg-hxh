@@ -9,6 +9,7 @@ import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
+import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
@@ -364,6 +365,114 @@ class RoomServiceTest {
 
         assertThrows(PlayerAlreadyInRoomException.class, () -> roomService.joinRoom(hash));
         verify(roomPlayerRepository, never()).save(any());
+    }
+
+    @Test
+    void createRoom_WithCustomMaxPlayers_ShouldUseProvidedValue() {
+        CreateRoomDTO dto = CreateRoomDTO.builder()
+                .name("Sala Grande")
+                .maxPlayers(15)
+                .build();
+
+        UUID roomId = UUID.randomUUID();
+        Room savedRoom = Room.builder()
+                .id(roomId)
+                .name("Sala Grande")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(15)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+        when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(savedRoom));
+
+        ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
+
+        assertEquals(15, response.getContent().getMaxPlayers());
+
+        ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
+        verify(roomRepository).save(roomCaptor.capture());
+        assertEquals(15, roomCaptor.getValue().getMaxPlayers());
+    }
+
+    @Test
+    void updateRoomName_AsMaster_ShouldUpdateAndReturnRoomData() {
+        UUID roomId = UUID.randomUUID();
+
+        UpdateRoomDTO dto = UpdateRoomDTO.builder()
+                .name("Sala Renovada")
+                .build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomRepository.save(room)).thenReturn(room);
+
+        ResponseDTO<RoomResponseDTO> response = roomService.updateRoomName(roomId, dto);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Sala atualizada com sucesso", response.getMessage());
+        assertEquals("Sala Renovada", response.getContent().getName());
+        verify(roomRepository).save(room);
+    }
+
+    @Test
+    void updateRoomName_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        UpdateRoomDTO dto = UpdateRoomDTO.builder()
+                .name("Sala Invadida")
+                .build();
+
+        User otherUser = User.builder()
+                .id(2L)
+                .name("Killua Zoldyck")
+                .email("gon@hunter.com")
+                .build();
+
+        User roomMaster = User.builder()
+                .id(99L)
+                .name("Outro Mestre")
+                .email("master@hunter.com")
+                .build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Outro")
+                .master(roomMaster)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(otherUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.updateRoomName(roomId, dto));
+        verify(roomRepository, never()).save(any(Room.class));
+    }
+
+    @Test
+    void updateRoomName_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        UpdateRoomDTO dto = UpdateRoomDTO.builder()
+                .name("Sala Fantasma")
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.updateRoomName(roomId, dto));
+        verify(roomRepository, never()).save(any(Room.class));
     }
 
     @Test
