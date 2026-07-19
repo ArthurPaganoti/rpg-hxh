@@ -172,15 +172,23 @@ RoomController GET /rooms/{id}/invite
   |
   v
 RoomService.getInviteLink(roomId)
-  |  1. Extrai email do SecurityContextHolder
-  |  2. Busca usuario por email
-  |  3. Busca sala por ID (404 se nao encontrada)
-  |  4. Verifica se usuario e o Mestre (403 se nao for)
-  |  5. Delega para RedisInviteService.getOrCreateInvite()
-  |  6. Retorna URL: https://api.rpg.com/rooms/join/{invite_hash}
+  |  1. findRoomAsMaster(roomId) — valida autenticacao e mastership
+  |  2. Delega para RedisInviteService.getOrCreateInvite()
+  |  3. Retorna URL: https://api.rpg.com/rooms/join/{invite_hash}
   v
 RoomController retorna 200 OK + ResponseDTO.success(InviteResponseDTO)
 ```
+
+### Autorizacao de Mestre (helpers centralizados)
+
+O `RoomService` centraliza a autorizacao em dois helpers privados, reutilizados por todas as operacoes de sala:
+
+| Helper | Responsabilidade |
+|--------|------------------|
+| `getAuthenticatedUser()` | Extrai o email do `SecurityContextHolder` e busca o usuario (`UserNotFoundException` se nao encontrado) |
+| `findRoomAsMaster(UUID roomId)` | Chama `getAuthenticatedUser()`, busca a sala (`RoomNotFoundException` 404) e valida que o usuario autenticado e o Mestre (`RoomAccessDeniedException` 403) |
+
+**Regra:** toda nova rota restrita ao Mestre (deletar sala, atualizar nome, expulsar/banir membros, convite por email) **deve** reutilizar `findRoomAsMaster` em vez de duplicar a verificacao.
 
 ### Armazenamento no Redis
 
