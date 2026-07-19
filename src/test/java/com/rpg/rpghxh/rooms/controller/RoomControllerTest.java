@@ -32,6 +32,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -230,6 +231,53 @@ class RoomControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterDeletesRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.deleteRoom(roomId)).thenReturn(ResponseDTO.success("Sala deletada com sucesso"));
+
+        mockMvc.perform(delete("/rooms/" + roomId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Sala deletada com sucesso"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterDeletesRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.deleteRoom(roomId)).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(delete("/rooms/" + roomId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenDeletingNonexistentRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.deleteRoom(roomId)).thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(delete("/rooms/" + roomId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyDeleteRoomWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/rooms/" + roomId))
+                .andExpect(status().isForbidden());
     }
 
     @Test

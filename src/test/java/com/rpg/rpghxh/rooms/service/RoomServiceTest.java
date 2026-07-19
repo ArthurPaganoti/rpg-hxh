@@ -367,6 +367,69 @@ class RoomServiceTest {
     }
 
     @Test
+    void deleteRoom_AsMaster_ShouldDeleteRoomPlayersAndInvite() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        ResponseDTO<Void> response = roomService.deleteRoom(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Sala deletada com sucesso", response.getMessage());
+        verify(redisInviteService).removeInvite(roomId);
+        verify(roomPlayerRepository).deleteByRoom(room);
+        verify(roomRepository).delete(room);
+    }
+
+    @Test
+    void deleteRoom_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User otherUser = User.builder()
+                .id(2L)
+                .name("Killua Zoldyck")
+                .email("gon@hunter.com")
+                .build();
+
+        User roomMaster = User.builder()
+                .id(99L)
+                .name("Outro Mestre")
+                .email("master@hunter.com")
+                .build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Outro")
+                .master(roomMaster)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(otherUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.deleteRoom(roomId));
+        verify(roomRepository, never()).delete(any(Room.class));
+        verify(redisInviteService, never()).removeInvite(any());
+    }
+
+    @Test
+    void deleteRoom_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.deleteRoom(roomId));
+        verify(roomRepository, never()).delete(any(Room.class));
+    }
+
+    @Test
     void joinRoom_RoomFull_ShouldThrowRoomFullException() {
         String hash = UUID.randomUUID().toString();
         UUID roomId = UUID.randomUUID();
