@@ -16,6 +16,8 @@ import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,21 +27,22 @@ import java.util.UUID;
 @Service
 public class RoomService {
 
-    private static final String INVITE_BASE_URL = "https://api.rpg.com/rooms/join/";
-
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
     private final RoomPlayerRepository roomPlayerRepository;
     private final RedisInviteService redisInviteService;
+    private final String inviteBaseUrl;
 
     public RoomService(RoomRepository roomRepository,
                        UserRepository userRepository,
                        RoomPlayerRepository roomPlayerRepository,
-                       RedisInviteService redisInviteService) {
+                       RedisInviteService redisInviteService,
+                       @Value("${INVITE_BASE_URL:https://api.rpg.com/rooms/join/}") String inviteBaseUrl) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
         this.roomPlayerRepository = roomPlayerRepository;
         this.redisInviteService = redisInviteService;
+        this.inviteBaseUrl = inviteBaseUrl;
     }
 
     @Transactional
@@ -66,7 +69,7 @@ public class RoomService {
         String inviteHash = redisInviteService.getOrCreateInvite(roomId, room.getMaster().getId());
 
         InviteResponseDTO response = InviteResponseDTO.builder()
-                .inviteUrl(INVITE_BASE_URL + inviteHash)
+                .inviteUrl(inviteBaseUrl + inviteHash)
                 .build();
 
         return ResponseDTO.success(response, "Link de convite gerado com sucesso");
@@ -96,16 +99,20 @@ public class RoomService {
 
         roomPlayerRepository.save(RoomPlayer.builder().room(room).user(user).build());
 
-        room.setCurrentPlayers(room.getCurrentPlayers() + 1);
+        room.setCurrentPlayers((int) roomPlayerRepository.countByRoom(room));
         Room updatedRoom = roomRepository.save(room);
 
         return ResponseDTO.success(buildRoomResponse(updatedRoom, updatedRoom.getMaster()), "Entrou na sala com sucesso");
     }
 
     private User getAuthenticatedUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        return userRepository.findByEmail(email)
+        if (authentication == null) {
+            throw new UserNotFoundException();
+        }
+
+        return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(UserNotFoundException::new);
     }
 

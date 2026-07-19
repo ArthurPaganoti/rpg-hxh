@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -52,13 +51,15 @@ class RoomServiceTest {
     @Mock
     private RedisInviteService redisInviteService;
 
-    @InjectMocks
     private RoomService roomService;
 
     private User masterUser;
 
     @BeforeEach
     void setUp() {
+        roomService = new RoomService(roomRepository, userRepository, roomPlayerRepository,
+                redisInviteService, "https://api.rpg.com/rooms/join/");
+
         masterUser = User.builder()
                 .id(1L)
                 .name("Gon Freecss")
@@ -299,6 +300,7 @@ class RoomServiceTest {
         when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
         when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(false);
         when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomPlayerRepository.countByRoom(room)).thenReturn(2L);
         when(roomRepository.save(room)).thenReturn(updatedRoom);
 
         ResponseDTO<RoomResponseDTO> response = roomService.joinRoom(hash);
