@@ -203,6 +203,22 @@ Gera ou recupera o link de convite da sala. **Apenas o Mestre** da sala pode ace
 
 ---
 
+### `DELETE /rooms/{id}` — Deletar Sala
+
+Deleta a sala permanentemente. **Apenas o Mestre** pode deletar (403 para outros usuários). Remove o convite ativo no Redis, todos os jogadores e a sala na mesma transação.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Sala deletada com sucesso",
+  "timestamp": "2026-07-19T15:00:00Z"
+}
+```
+
+---
+
 ### Formato Padrão de Resposta (`ResponseDTO<T>`)
 
 Todos os endpoints seguem o mesmo formato:

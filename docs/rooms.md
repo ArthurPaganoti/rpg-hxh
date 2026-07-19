@@ -123,6 +123,31 @@ Retornado quando o token JWT esta ausente ou invalido.
 
 ---
 
+### `DELETE /rooms/{id}` — Deletar Sala
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode deletar.
+
+Deleta a sala permanentemente, removendo na mesma transacao:
+1. O convite ativo no Redis (`RedisInviteService.removeInvite`)
+2. Todos os registros de `room_players` (`deleteByRoom` — a FK nao tem cascade)
+3. A sala em si
+
+#### Respostas
+
+**200 OK — Sala Deletada:**
+
+```json
+{
+  "success": true,
+  "message": "Sala deletada com sucesso",
+  "timestamp": "2026-07-19T15:00:00Z"
+}
+```
+
+**403 Forbidden — Usuario nao e o Mestre** e **404 Not Found — Sala nao encontrada**: mesmo formato dos endpoints anteriores (`BUSINESS_ERROR`), validados via `findRoomAsMaster`.
+
+---
+
 ## Arquitetura
 
 A feature segue o padrao de **Functional Slice**:
@@ -221,6 +246,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Limite de jogadores | `max_players` padrao e 10 |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
+| Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
 | Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
 | Convite invalido | Retorna 404 se o hash nao existe ou expirou |
 
