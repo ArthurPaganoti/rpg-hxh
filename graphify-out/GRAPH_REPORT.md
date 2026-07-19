@@ -1,32 +1,37 @@
 # Graph Report - .  (2026-07-19)
 
 ## Corpus Check
-- 5 files · ~105,488 words
+- 7 files · ~105,969 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 601 nodes · 1251 edges · 43 communities (22 shown, 21 thin omitted)
-- Extraction: 88% EXTRACTED · 12% INFERRED · 0% AMBIGUOUS · INFERRED: 146 edges (avg confidence: 0.81)
-- Token cost: 33,844 input · 0 output
+- 643 nodes · 1300 edges · 61 communities (27 shown, 34 thin omitted)
+- Extraction: 88% EXTRACTED · 12% INFERRED · 0% AMBIGUOUS · INFERRED: 154 edges (avg confidence: 0.81)
+- Token cost: 36,411 input · 0 output
 
 ## Community Hubs (Navigation)
-- User.java / .existsByEmail() / .existsBy
-- UserRepository / .findByEmail() / .findB
 - AfterEach / BeforeEach / CreateRoomDTO
-- EnableWebSecurity / OncePerRequestFilter
+- UserRepository / .findByEmail() / LoginC
 - Claims / SecretKey / JwtAuthenticationFi
-- .success() / BusinessException.java / Bu
-- GetMapping / RequestMapping / RoomContro
+- User.java / .existsByEmail() / .existsBy
+- OncePerRequestFilter / RateLimitFilter.j
+- Bean / HttpSecurity / Import
 - JpaRepository / Lock / Query
 - NullAndEmptySource / ParameterizedTest /
 - HashOperations / RedisInviteService.java
+- Docker Compose Infrastructure / postgres
 - ConstraintValidator / PasswordMatch.java
 - ExceptionHandler / JsonInclude / MethodA
-- Docker Compose Infrastructure / postgres
+- RegisterControllerTest.java / Bean / Htt
+- ApiResponses / DeleteMapping / GetMappin
 - InvalidCredentialsException / JwtAuthent
+- EnableWebSecurity / SecurityConfig.java 
+- CreateRoomDTO.java / CreateRoomDTO / All
 - ApplicationContextInitializer / Configur
 - OpenAPI / SwaggerConfig.java / Bean
 - JacksonConfig.java / JacksonConfig / .ob
+- InviteResponseDTO.java / InviteResponseD
+- RoomResponseDTO.java / AllArgsConstructo
 - SpringBootTest / RpgHxhApplicationTests.
 - Hunter x Hunter Theme / Killua Zoldyck /
 - gradlew / gradlew script / die()
@@ -43,8 +48,21 @@
 - RedisInviteService
 - RoomPlayerRepository
 - RoomRepository
+- ApiResponses
+- Operation
+- PostMapping
+- ResponseEntity
+- RestController
+- Tag
 - Service
 - Transactional
+- Bean
+- HttpSecurity
+- Import
+- MockMvc
+- SecurityFilterChain
+- TestConfiguration
+- WebMvcTest
 - AfterEach
 - BeforeEach
 - ExtendWith
@@ -53,13 +71,13 @@
 - UserRepository
 
 ## God Nodes (most connected - your core abstractions)
-1. `ResponseDTO` - 26 edges
-2. `RoomServiceTest` - 23 edges
-3. `JwtService` - 22 edges
+1. `RoomServiceTest` - 26 edges
+2. `JwtService` - 22 edges
+3. `ResponseDTO` - 22 edges
 4. `RateLimitFilterTest` - 22 edges
-5. `User` - 20 edges
-6. `RoomService` - 20 edges
-7. `RoomControllerTest` - 18 edges
+5. `RoomControllerTest` - 22 edges
+6. `RoomService` - 21 edges
+7. `User` - 20 edges
 8. `UserRepository` - 17 edges
 9. `RegisterDTO` - 17 edges
 10. `RegisterControllerTest` - 16 edges
@@ -67,102 +85,123 @@
 ## Surprising Connections (you probably didn't know these)
 - `Test application.yaml (H2 + create-drop + Flyway off)` --implements--> `Test Environment Configuration (H2, Flyway Disabled)`  [INFERRED]
   src/test/resources/application.yaml → docs/initial_setup.md
-- `redis service (redis:7-alpine, AOF appendonly enabled, redis-cli ping healthcheck, redis_data volume)` --shares_data_with--> `RedisInviteService`  [INFERRED]
+- `redis service (redis:7-alpine, AOF appendonly enabled, redis-cli ping healthcheck, redis_data volume)` --shares_data_with--> `RedisInviteService (invite hash + reverse index, TTL 8h)`  [INFERRED]
   docker-compose.yml → docs/rooms.md
-- `redis service (redis:7-alpine, AOF appendonly enabled, redis-cli ping healthcheck, redis_data volume)` --shares_data_with--> `Security Model (JWT, BCrypt, Rate Limiting)`  [INFERRED]
+- `redis service (redis:7-alpine, AOF appendonly enabled, redis-cli ping healthcheck, redis_data volume)` --shares_data_with--> `Security Model (JWT, BCrypt, Rate Limiting, Stateless Sessions)`  [INFERRED]
   docker-compose.yml → README.MD
-- `RPG HxH Backend API` --references--> `Configurable INVITE_BASE_URL env var`  [EXTRACTED]
-  README.MD → docs/rooms.md
-- `Join Room Flow (GET /rooms/join/{hash})` --references--> `ResponseDTO Standard Response Format`  [INFERRED]
+- `Room Creation Flow (POST /rooms)` --implements--> `Functional Slices Architecture`  [EXTRACTED]
   docs/rooms.md → README.MD
+- `Bug Report Issue Template` --semantically_similar_to--> `Feature Request Issue Template`  [INFERRED] [semantically similar]
+  .github/bug_report.yaml → .github/feature_request.yaml
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **hyper_invite_flow** — docs_rooms_secure_invite_system, docs_rooms_redisinviteservice, docs_rooms_join_room_flow, docs_rooms_invite_base_url [EXTRACTED 1.00]
+- **Room deletion transaction: findRoomAsMaster -> removeInvite (Redis) -> deleteByRoom (room_players) -> delete room** — docs_rooms_delete_room_flow, docs_rooms_findroomasmaster, docs_rooms_redisinviteservice, docs_rooms_player_count_derivation [EXTRACTED 1.00]
+- **Invite lifecycle: master generates via GET /rooms/{id}/invite -> RedisInviteService stores hash+reverse index (TTL 8h) -> player joins via GET /rooms/join/{hash}** — docs_rooms_invite_generation_flow, docs_rooms_redisinviteservice, docs_rooms_join_room_flow, docs_rooms_invite_base_url [EXTRACTED 1.00]
 - **JWT Authentication Flow** — docs_authentication_login_flow, docs_authentication_jwt_service, docs_authentication_redis_session_service, docs_authentication_jwt_authentication_filter, docs_authentication_rate_limit_filter, docs_authentication_security_config [EXTRACTED 1.00]
 - **Redis TTL-Backed State (sessions, rate limits, invites)** — docs_authentication_redis_session_service, docs_authentication_rate_limit_filter, docs_initial_setup_redis_infrastructure [INFERRED 0.85]
 
-## Communities (43 total, 21 thin omitted)
+## Communities (61 total, 34 thin omitted)
 
-### Community 0 - "User.java / .existsByEmail() / .existsBy"
-Cohesion: 0.06
-Nodes (39): ApiResponses, Operation, PostMapping, ResponseEntity, RestController, Tag, RegisterController, AllArgsConstructor (+31 more)
+### Community 0 - "AfterEach / BeforeEach / CreateRoomDTO"
+Cohesion: 0.05
+Nodes (35): AfterEach, BeforeEach, CreateRoomDTO, ExtendWith, Room, RoomPlayer, Service, Room (+27 more)
 
-### Community 1 - "UserRepository / .findByEmail() / .findB"
-Cohesion: 0.06
+### Community 1 - "UserRepository / .findByEmail() / LoginC"
+Cohesion: 0.07
 Nodes (36): UserRepository, ApiResponses, Operation, PostMapping, ResponseEntity, RestController, Tag, LoginController (+28 more)
 
-### Community 2 - "AfterEach / BeforeEach / CreateRoomDTO"
+### Community 2 - "Claims / SecretKey / JwtAuthenticationFi"
 Cohesion: 0.09
-Nodes (27): AfterEach, BeforeEach, CreateRoomDTO, ExtendWith, InviteResponseDTO, ResponseDTO, Room, RoomPlayer (+19 more)
+Nodes (21): Claims, SecretKey, Component, FilterChain, HttpServletRequest, HttpServletResponse, Override, JwtAuthenticationFilter (+13 more)
 
-### Community 3 - "EnableWebSecurity / OncePerRequestFilter"
-Cohesion: 0.09
-Nodes (26): EnableWebSecurity, OncePerRequestFilter, Bean, Configuration, HttpSecurity, PasswordEncoder, SecurityFilterChain, SecurityConfig (+18 more)
-
-### Community 4 - "Claims / SecretKey / JwtAuthenticationFi"
-Cohesion: 0.09
-Nodes (20): Claims, SecretKey, Component, FilterChain, HttpServletRequest, HttpServletResponse, Override, Service (+12 more)
-
-### Community 5 - ".success() / BusinessException.java / Bu"
+### Community 3 - "User.java / .existsByEmail() / .existsBy"
 Cohesion: 0.08
-Nodes (18): BusinessException, InvalidInviteException, PasswordMismatchException, PlayerAlreadyInRoomException, RoomAccessDeniedException, RoomFullException, RoomNotFoundException, Bean (+10 more)
+Nodes (28): ApiResponses, Operation, PostMapping, ResponseEntity, RestController, Tag, RegisterController, AllArgsConstructor (+20 more)
 
-### Community 6 - "GetMapping / RequestMapping / RoomContro"
-Cohesion: 0.11
-Nodes (25): GetMapping, RequestMapping, ApiResponses, Operation, PostMapping, ResponseEntity, RestController, Tag (+17 more)
+### Community 4 - "OncePerRequestFilter / RateLimitFilter.j"
+Cohesion: 0.12
+Nodes (18): OncePerRequestFilter, Component, FilterChain, HttpServletRequest, HttpServletResponse, ObjectMapper, Override, StringRedisTemplate (+10 more)
 
-### Community 7 - "JpaRepository / Lock / Query"
-Cohesion: 0.09
+### Community 5 - "Bean / HttpSecurity / Import"
+Cohesion: 0.13
+Nodes (14): Bean, HttpSecurity, Import, InviteResponseDTO, MockMvc, ResponseDTO, RoomResponseDTO, SecurityFilterChain (+6 more)
+
+### Community 6 - "JpaRepository / Lock / Query"
+Cohesion: 0.08
 Nodes (25): JpaRepository, Lock, Query, AllArgsConstructor, Builder, Data, Entity, NoArgsConstructor (+17 more)
 
-### Community 8 - "NullAndEmptySource / ParameterizedTest /"
+### Community 7 - "NullAndEmptySource / ParameterizedTest /"
 Cohesion: 0.14
 Nodes (14): NullAndEmptySource, ParameterizedTest, Pattern, ConstraintValidatorContext, Override, PasswordValidator, Constraint, Documented (+6 more)
 
-### Community 9 - "HashOperations / RedisInviteService.java"
+### Community 8 - "HashOperations / RedisInviteService.java"
 Cohesion: 0.16
 Nodes (10): HashOperations, Service, StringRedisTemplate, RedisInviteService, BeforeEach, ExtendWith, StringRedisTemplate, Test (+2 more)
+
+### Community 9 - "Docker Compose Infrastructure / postgres"
+Cohesion: 0.13
+Nodes (25): Docker Compose Infrastructure (PostgreSQL + Redis with healthchecks and persistent volumes), postgres service (postgres:15-alpine, env-driven DB_NAME/DB_USERNAME/DB_PASSWORD, pg_isready healthcheck, postgres_data volume), redis service (redis:7-alpine, AOF appendonly enabled, redis-cli ping healthcheck, redis_data volume), Room Deletion Flow (DELETE /rooms/{id}, master-only, single transaction), findRoomAsMaster(UUID) helper, getAuthenticatedUser() helper, INVITE_BASE_URL configurable invite URL base, Invite Generation Flow (GET /rooms/{id}/invite, master-only) (+17 more)
 
 ### Community 10 - "ConstraintValidator / PasswordMatch.java"
 Cohesion: 0.16
 Nodes (12): ConstraintValidator, Constraint, Documented, Retention, Target, PasswordMatch, ConstraintValidatorContext, Override (+4 more)
 
 ### Community 11 - "ExceptionHandler / JsonInclude / MethodA"
-Cohesion: 0.27
+Cohesion: 0.26
 Nodes (9): ExceptionHandler, JsonInclude, MethodArgumentNotValidException, RestControllerAdvice, Slf4j, Getter, ResponseDTO, GlobalExceptionHandler (+1 more)
 
-### Community 12 - "Docker Compose Infrastructure / postgres"
-Cohesion: 0.20
-Nodes (15): Docker Compose Infrastructure (PostgreSQL + Redis with healthchecks and persistent volumes), postgres service (postgres:15-alpine, env-driven DB_NAME/DB_USERNAME/DB_PASSWORD, pg_isready healthcheck, postgres_data volume), redis service (redis:7-alpine, AOF appendonly enabled, redis-cli ping healthcheck, redis_data volume), findRoomAsMaster(UUID) helper, getAuthenticatedUser() helper, Configurable INVITE_BASE_URL env var, Join Room Flow (GET /rooms/join/{hash}), Player Count Derivation via COUNT(room_players) (+7 more)
+### Community 12 - "RegisterControllerTest.java / Bean / Htt"
+Cohesion: 0.19
+Nodes (11): Bean, HttpSecurity, Import, MockMvc, ObjectMapper, SecurityFilterChain, Test, TestConfiguration (+3 more)
 
-### Community 13 - "InvalidCredentialsException / JwtAuthent"
+### Community 13 - "ApiResponses / DeleteMapping / GetMappin"
+Cohesion: 0.22
+Nodes (14): ApiResponses, DeleteMapping, GetMapping, Operation, PostMapping, RequestMapping, ResponseEntity, RestController (+6 more)
+
+### Community 14 - "InvalidCredentialsException / JwtAuthent"
 Cohesion: 0.20
 Nodes (14): InvalidCredentialsException (401 BUSINESS_ERROR), JwtAuthenticationFilter, JwtService (Token Generation and Validation), Login and JWT Authentication Flow, RateLimitFilter (Redis IP Rate Limiting), RedisSessionService (Redis Session Storage), SecurityConfig (Spring Security Configuration), DotenvConfig (.env Loading) (+6 more)
 
-### Community 14 - "ApplicationContextInitializer / Configur"
+### Community 15 - "EnableWebSecurity / SecurityConfig.java "
+Cohesion: 0.31
+Nodes (7): EnableWebSecurity, Bean, Configuration, HttpSecurity, PasswordEncoder, SecurityFilterChain, SecurityConfig
+
+### Community 16 - "CreateRoomDTO.java / CreateRoomDTO / All"
+Cohesion: 0.52
+Nodes (6): CreateRoomDTO, AllArgsConstructor, Builder, Data, NoArgsConstructor, Schema
+
+### Community 17 - "ApplicationContextInitializer / Configur"
 Cohesion: 0.53
 Nodes (4): ApplicationContextInitializer, ConfigurableApplicationContext, DotenvConfig, Override
 
-### Community 15 - "OpenAPI / SwaggerConfig.java / Bean"
+### Community 18 - "OpenAPI / SwaggerConfig.java / Bean"
 Cohesion: 0.53
 Nodes (4): OpenAPI, Bean, Configuration, SwaggerConfig
 
-### Community 16 - "JacksonConfig.java / JacksonConfig / .ob"
+### Community 19 - "JacksonConfig.java / JacksonConfig / .ob"
 Cohesion: 0.53
 Nodes (4): JacksonConfig, Bean, Configuration, ObjectMapper
 
-### Community 17 - "SpringBootTest / RpgHxhApplicationTests."
+### Community 20 - "InviteResponseDTO.java / InviteResponseD"
+Cohesion: 0.60
+Nodes (5): InviteResponseDTO, AllArgsConstructor, Builder, Data, NoArgsConstructor
+
+### Community 21 - "RoomResponseDTO.java / AllArgsConstructo"
+Cohesion: 0.60
+Nodes (5): AllArgsConstructor, Builder, Data, NoArgsConstructor, RoomResponseDTO
+
+### Community 22 - "SpringBootTest / RpgHxhApplicationTests."
 Cohesion: 0.60
 Nodes (3): SpringBootTest, Test, RpgHxhApplicationTests
 
-### Community 18 - "Hunter x Hunter Theme / Killua Zoldyck /"
+### Community 23 - "Hunter x Hunter Theme / Killua Zoldyck /"
 Cohesion: 0.67
 Nodes (4): Hunter x Hunter Theme, Killua Zoldyck (Hunter x Hunter character), README.md, Killua README Image
 
-### Community 19 - "gradlew / gradlew script / die()"
+### Community 24 - "gradlew / gradlew script / die()"
 Cohesion: 0.83
 Nodes (3): gradlew script, die(), warn()
 
@@ -171,24 +210,24 @@ Nodes (3): gradlew script, die(), warn()
   src/main/java/com/rpg/rpghxh/utils/imagens/KILLUA_IMAGEM_README.png · relation: references
 
 ## Knowledge Gaps
-- **17 isolated node(s):** `users`, `rooms`, `rooms`, `rooms`, `room_players` (+12 more)
+- **21 isolated node(s):** `users`, `rooms`, `rooms`, `rooms`, `room_players` (+16 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **34 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Killua README Image` and `README.md`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **Why does `RegisterDTO` connect `User.java / .existsByEmail() / .existsBy` to `ConstraintValidator / PasswordMatch.java`?**
-  _High betweenness centrality (0.141) - this node is a cross-community bridge._
-- **Why does `ResponseDTO` connect `ExceptionHandler / JsonInclude / MethodA` to `User.java / .existsByEmail() / .existsBy`, `UserRepository / .findByEmail() / .findB`, `.success() / BusinessException.java / Bu`, `GetMapping / RequestMapping / RoomContro`?**
-  _High betweenness centrality (0.114) - this node is a cross-community bridge._
-- **Why does `JwtService` connect `Claims / SecretKey / JwtAuthenticationFi` to `UserRepository / .findByEmail() / .findB`, `EnableWebSecurity / OncePerRequestFilter`?**
-  _High betweenness centrality (0.089) - this node is a cross-community bridge._
+- **Why does `RegisterDTO` connect `User.java / .existsByEmail() / .existsBy` to `ConstraintValidator / PasswordMatch.java`, `RegisterControllerTest.java / Bean / Htt`?**
+  _High betweenness centrality (0.124) - this node is a cross-community bridge._
+- **Why does `RoomService` connect `AfterEach / BeforeEach / CreateRoomDTO` to `Bean / HttpSecurity / Import`, `ApiResponses / DeleteMapping / GetMappin`?**
+  _High betweenness centrality (0.097) - this node is a cross-community bridge._
+- **Why does `JwtService` connect `Claims / SecretKey / JwtAuthenticationFi` to `UserRepository / .findByEmail() / LoginC`?**
+  _High betweenness centrality (0.081) - this node is a cross-community bridge._
 - **What connects `users`, `rooms`, `rooms` to the rest of the system?**
-  _17 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `User.java / .existsByEmail() / .existsBy` be split into smaller, more focused modules?**
-  _Cohesion score 0.058126619770455384 - nodes in this community are weakly interconnected._
-- **Should `UserRepository / .findByEmail() / .findB` be split into smaller, more focused modules?**
-  _Cohesion score 0.06498015873015874 - nodes in this community are weakly interconnected._
+  _21 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `AfterEach / BeforeEach / CreateRoomDTO` be split into smaller, more focused modules?**
+  _Cohesion score 0.0526006464883926 - nodes in this community are weakly interconnected._
+- **Should `UserRepository / .findByEmail() / LoginC` be split into smaller, more focused modules?**
+  _Cohesion score 0.06547619047619048 - nodes in this community are weakly interconnected._
