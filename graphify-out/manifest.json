@@ -1,0 +1,382 @@
+{
+  "build.gradle": {
+    "mtime": 1774715653.70095,
+    "ast_hash": "2807ec9e826287ea4cebe284e52da6a8",
+    "semantic_hash": "2807ec9e826287ea4cebe284e52da6a8"
+  },
+  "gradlew": {
+    "mtime": 1773028034.1110604,
+    "ast_hash": "780b1d3e23a3b82154795f73df943a14",
+    "semantic_hash": "780b1d3e23a3b82154795f73df943a14"
+  },
+  "settings.gradle": {
+    "mtime": 1773028034.1100602,
+    "ast_hash": "ee5d8b4162aa8e2e443217499348781e",
+    "semantic_hash": "ee5d8b4162aa8e2e443217499348781e"
+  },
+  "src/main/java/com/rpg/rpghxh/RpgHxhApplication.java": {
+    "mtime": 1773028039.6700754,
+    "ast_hash": "101e2bb957857ad3d2783f42936989e5",
+    "semantic_hash": "101e2bb957857ad3d2783f42936989e5"
+  },
+  "src/main/java/com/rpg/rpghxh/config/DotenvConfig.java": {
+    "mtime": 1773028851.2504318,
+    "ast_hash": "24530df2c207aa5c746354ff62e051f1",
+    "semantic_hash": "24530df2c207aa5c746354ff62e051f1"
+  },
+  "src/main/java/com/rpg/rpghxh/config/JacksonConfig.java": {
+    "mtime": 1779649506.3447278,
+    "ast_hash": "a23bbe0035b830939695a425f19ab561",
+    "semantic_hash": "a23bbe0035b830939695a425f19ab561"
+  },
+  "src/main/java/com/rpg/rpghxh/config/SecurityConfig.java": {
+    "mtime": 1779649023.8315442,
+    "ast_hash": "6d0124d72741272cee483c325947e576",
+    "semantic_hash": "6d0124d72741272cee483c325947e576"
+  },
+  "src/main/java/com/rpg/rpghxh/config/SwaggerConfig.java": {
+    "mtime": 1774149076.2896101,
+    "ast_hash": "548ac6ea3b162ede1acb56a48b66251e",
+    "semantic_hash": "548ac6ea3b162ede1acb56a48b66251e"
+  },
+  "src/main/java/com/rpg/rpghxh/entities/room/entity/Room.java": {
+    "mtime": 1774714950.322626,
+    "ast_hash": "9801f6bc154af293538d89afe58dbaba",
+    "semantic_hash": "9801f6bc154af293538d89afe58dbaba"
+  },
+  "src/main/java/com/rpg/rpghxh/entities/room/entity/RoomPlayer.java": {
+    "mtime": 1779650394.4058769,
+    "ast_hash": "5a6025c993ab7d700fcd575800452884",
+    "semantic_hash": "5a6025c993ab7d700fcd575800452884"
+  },
+  "src/main/java/com/rpg/rpghxh/entities/room/repository/RoomPlayerRepository.java": {
+    "mtime": 1779650394.9348786,
+    "ast_hash": "04a05857965433e67d9824812c376335",
+    "semantic_hash": "04a05857965433e67d9824812c376335"
+  },
+  "src/main/java/com/rpg/rpghxh/entities/room/repository/RoomRepository.java": {
+    "mtime": 1779655307.4397273,
+    "ast_hash": "b74deb9a3162e03bfda36f9d36167353",
+    "semantic_hash": "b74deb9a3162e03bfda36f9d36167353"
+  },
+  "src/main/java/com/rpg/rpghxh/entities/user/entity/User.java": {
+    "mtime": 1774148006.0281172,
+    "ast_hash": "08401a216519c88cd63d581477ccaf8d",
+    "semantic_hash": "08401a216519c88cd63d581477ccaf8d"
+  },
+  "src/main/java/com/rpg/rpghxh/entities/user/repository/UserRepository.java": {
+    "mtime": 1774148006.9771197,
+    "ast_hash": "0dec097b3ec31d607ff2204fa4cabed8",
+    "semantic_hash": "0dec097b3ec31d607ff2204fa4cabed8"
+  },
+  "src/main/java/com/rpg/rpghxh/login/controller/LoginController.java": {
+    "mtime": 1774149020.7164907,
+    "ast_hash": "be994072de9464f945128f538ce6a766",
+    "semantic_hash": "be994072de9464f945128f538ce6a766"
+  },
+  "src/main/java/com/rpg/rpghxh/login/dto/LoginDTO.java": {
+    "mtime": 1774148991.7624285,
+    "ast_hash": "27daa30a6ed633ed8a1bd3ff6d8c97df",
+    "semantic_hash": "27daa30a6ed633ed8a1bd3ff6d8c97df"
+  },
+  "src/main/java/com/rpg/rpghxh/login/filter/JwtAuthenticationFilter.java": {
+    "mtime": 1774149022.748495,
+    "ast_hash": "89858de90dbadb957dbf551fff1904c8",
+    "semantic_hash": "89858de90dbadb957dbf551fff1904c8"
+  },
+  "src/main/java/com/rpg/rpghxh/login/filter/RateLimitFilter.java": {
+    "mtime": 1779661087.4290426,
+    "ast_hash": "ac7b26a7d306f648e95b7bbfda13ebc9",
+    "semantic_hash": "ac7b26a7d306f648e95b7bbfda13ebc9"
+  },
+  "src/main/java/com/rpg/rpghxh/login/service/JwtService.java": {
+    "mtime": 1774148993.5724323,
+    "ast_hash": "8b29252950c5f7161227b8fd676ae06d",
+    "semantic_hash": "8b29252950c5f7161227b8fd676ae06d"
+  },
+  "src/main/java/com/rpg/rpghxh/login/service/LoginService.java": {
+    "mtime": 1774149019.9764893,
+    "ast_hash": "7136d6f9939214a25dd8ea7bca7ac76f",
+    "semantic_hash": "7136d6f9939214a25dd8ea7bca7ac76f"
+  },
+  "src/main/java/com/rpg/rpghxh/login/service/RedisSessionService.java": {
+    "mtime": 1774150426.2508595,
+    "ast_hash": "b8f2300954ef187aa5aec4b5cc5ef12c",
+    "semantic_hash": "b8f2300954ef187aa5aec4b5cc5ef12c"
+  },
+  "src/main/java/com/rpg/rpghxh/register/controller/RegisterController.java": {
+    "mtime": 1774149862.9065926,
+    "ast_hash": "453712a47411c103600a6ffb5db3aef4",
+    "semantic_hash": "453712a47411c103600a6ffb5db3aef4"
+  },
+  "src/main/java/com/rpg/rpghxh/register/dto/RegisterDTO.java": {
+    "mtime": 1774148003.4881103,
+    "ast_hash": "3736a6c13305fee2efcb1dc9af78451b",
+    "semantic_hash": "3736a6c13305fee2efcb1dc9af78451b"
+  },
+  "src/main/java/com/rpg/rpghxh/register/mapper/RegisterMapper.java": {
+    "mtime": 1774148004.478113,
+    "ast_hash": "c220b303492432239f9d0cd9b1b04994",
+    "semantic_hash": "c220b303492432239f9d0cd9b1b04994"
+  },
+  "src/main/java/com/rpg/rpghxh/register/service/RegisterService.java": {
+    "mtime": 1774148001.0401037,
+    "ast_hash": "01396611979e492fdf730603faaf66c1",
+    "semantic_hash": "01396611979e492fdf730603faaf66c1"
+  },
+  "src/main/java/com/rpg/rpghxh/rooms/controller/RoomController.java": {
+    "mtime": 1779661079.563831,
+    "ast_hash": "145aeeb15fe43f4876ab97aa930fe710",
+    "semantic_hash": "145aeeb15fe43f4876ab97aa930fe710"
+  },
+  "src/main/java/com/rpg/rpghxh/rooms/dto/CreateRoomDTO.java": {
+    "mtime": 1774714931.6475286,
+    "ast_hash": "777cbebb2926fe9dc0efada8cc048e14",
+    "semantic_hash": "777cbebb2926fe9dc0efada8cc048e14"
+  },
+  "src/main/java/com/rpg/rpghxh/rooms/dto/InviteResponseDTO.java": {
+    "mtime": 1774712116.1408415,
+    "ast_hash": "36f8bbfb5a49a8aa11f1a06718a1ec45",
+    "semantic_hash": "36f8bbfb5a49a8aa11f1a06718a1ec45"
+  },
+  "src/main/java/com/rpg/rpghxh/rooms/dto/RoomResponseDTO.java": {
+    "mtime": 1774714938.553565,
+    "ast_hash": "cd73201c003e5b81c3c056c080c6395a",
+    "semantic_hash": "cd73201c003e5b81c3c056c080c6395a"
+  },
+  "src/main/java/com/rpg/rpghxh/rooms/service/RedisInviteService.java": {
+    "mtime": 1779650490.3221726,
+    "ast_hash": "50bfb63e1886a3f59170374fe0ebec31",
+    "semantic_hash": "50bfb63e1886a3f59170374fe0ebec31"
+  },
+  "src/main/java/com/rpg/rpghxh/rooms/service/RoomService.java": {
+    "mtime": 1779655456.7923312,
+    "ast_hash": "05593124025db26944efbaa9c1915647",
+    "semantic_hash": "05593124025db26944efbaa9c1915647"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/dto/ResponseDTO.java": {
+    "mtime": 1773960882.3964713,
+    "ast_hash": "4dd4c479c19bd4f4b65e7a85e9a059e4",
+    "semantic_hash": "4dd4c479c19bd4f4b65e7a85e9a059e4"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/BusinessException.java": {
+    "mtime": 1773960887.6574721,
+    "ast_hash": "c0968bfa2cdd1fbe56d94d98da4240f5",
+    "semantic_hash": "c0968bfa2cdd1fbe56d94d98da4240f5"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/EmailAlreadyExistsException.java": {
+    "mtime": 1773960889.4554725,
+    "ast_hash": "c388bcaf59b9c44e29f76d0faea0a4d4",
+    "semantic_hash": "c388bcaf59b9c44e29f76d0faea0a4d4"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/GlobalExceptionHandler.java": {
+    "mtime": 1779656625.9198382,
+    "ast_hash": "5c6e817fed4417badf51428affe27eac",
+    "semantic_hash": "5c6e817fed4417badf51428affe27eac"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/InvalidCredentialsException.java": {
+    "mtime": 1774148992.7684305,
+    "ast_hash": "c3b8950b5d157ea9ec1d42107af86d92",
+    "semantic_hash": "c3b8950b5d157ea9ec1d42107af86d92"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/InvalidInviteException.java": {
+    "mtime": 1779650395.5268803,
+    "ast_hash": "79b36ddcd127d99a871da78218972e49",
+    "semantic_hash": "79b36ddcd127d99a871da78218972e49"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/NameAlreadyExistsException.java": {
+    "mtime": 1773960890.1964726,
+    "ast_hash": "50939b4e02268c44612e9c67f573f840",
+    "semantic_hash": "50939b4e02268c44612e9c67f573f840"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/PasswordMismatchException.java": {
+    "mtime": 1773960890.8744726,
+    "ast_hash": "581f77c0b56bdc5e96018448ef936578",
+    "semantic_hash": "581f77c0b56bdc5e96018448ef936578"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/PlayerAlreadyInRoomException.java": {
+    "mtime": 1779650397.8388877,
+    "ast_hash": "8d56e2dac5c2b43faf42f187f73f50bc",
+    "semantic_hash": "8d56e2dac5c2b43faf42f187f73f50bc"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/RoomAccessDeniedException.java": {
+    "mtime": 1774712115.1788445,
+    "ast_hash": "7e20b1ad47dd31ae2a7dda480269082f",
+    "semantic_hash": "7e20b1ad47dd31ae2a7dda480269082f"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/RoomFullException.java": {
+    "mtime": 1779650397.2088857,
+    "ast_hash": "f1b791fbe73513e819d44ea31a1fddda",
+    "semantic_hash": "f1b791fbe73513e819d44ea31a1fddda"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/RoomNotFoundException.java": {
+    "mtime": 1774712113.7098489,
+    "ast_hash": "05f54546511c01c82054212d7ee20dda",
+    "semantic_hash": "05f54546511c01c82054212d7ee20dda"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/exceptions/UserNotFoundException.java": {
+    "mtime": 1774404824.958855,
+    "ast_hash": "498b6d9585451f2835f558f187fa5ee7",
+    "semantic_hash": "498b6d9585451f2835f558f187fa5ee7"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/validation/PasswordMatch.java": {
+    "mtime": 1773960885.0144715,
+    "ast_hash": "ae690bd322af24d3e6f5dcb75b14cd3b",
+    "semantic_hash": "ae690bd322af24d3e6f5dcb75b14cd3b"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/validation/PasswordMatchValidator.java": {
+    "mtime": 1773960885.6784718,
+    "ast_hash": "7f975bb59a148ef8ace4a873f5589c98",
+    "semantic_hash": "7f975bb59a148ef8ace4a873f5589c98"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/validation/PasswordValidator.java": {
+    "mtime": 1773960884.2124715,
+    "ast_hash": "63ce77a64d01729825dec8a9c58773f8",
+    "semantic_hash": "63ce77a64d01729825dec8a9c58773f8"
+  },
+  "src/main/java/com/rpg/rpghxh/shared/validation/ValidPassword.java": {
+    "mtime": 1773960883.3874714,
+    "ast_hash": "d75f89fffd043b2b7a3b79365831b1e1",
+    "semantic_hash": "d75f89fffd043b2b7a3b79365831b1e1"
+  },
+  "src/main/resources/db/migration/V1__Create_Users_Table.sql": {
+    "mtime": 1773098174.5227134,
+    "ast_hash": "0a20d035b0b21b5775a234d7000f45ef",
+    "semantic_hash": "0a20d035b0b21b5775a234d7000f45ef"
+  },
+  "src/main/resources/db/migration/V2__Create_Rooms_Table.sql": {
+    "mtime": 1774401593.2360504,
+    "ast_hash": "d40daf81c677150e5b8c1fa56b384893",
+    "semantic_hash": "d40daf81c677150e5b8c1fa56b384893"
+  },
+  "src/main/resources/db/migration/V3__Add_Invite_Hash_And_Default_Privacy.sql": {
+    "mtime": 1774715227.1557956,
+    "ast_hash": "45bda1bf99de5e191e27e3ce038bc2fa",
+    "semantic_hash": "45bda1bf99de5e191e27e3ce038bc2fa"
+  },
+  "src/main/resources/db/migration/V4__Remove_Privacy_And_Invite_Code.sql": {
+    "mtime": 1774715349.6931877,
+    "ast_hash": "034859fc34a175dcfe7e5b927d98e5af",
+    "semantic_hash": "034859fc34a175dcfe7e5b927d98e5af"
+  },
+  "src/main/resources/db/migration/V5__Create_Room_Players_Table.sql": {
+    "mtime": 1779650392.9978724,
+    "ast_hash": "5e34c52d7a94cdc9b45d24d36b93a5b3",
+    "semantic_hash": "5e34c52d7a94cdc9b45d24d36b93a5b3"
+  },
+  "src/test/java/com/rpg/rpghxh/RpgHxhApplicationTests.java": {
+    "mtime": 1773028039.6580756,
+    "ast_hash": "225c1a9eeaf73b872143635a344fcec5",
+    "semantic_hash": "225c1a9eeaf73b872143635a344fcec5"
+  },
+  "src/test/java/com/rpg/rpghxh/login/controller/LoginControllerTest.java": {
+    "mtime": 1774206705.70922,
+    "ast_hash": "9306822b1559ac20a37af315bc0b5279",
+    "semantic_hash": "9306822b1559ac20a37af315bc0b5279"
+  },
+  "src/test/java/com/rpg/rpghxh/login/filter/JwtAuthenticationFilterTest.java": {
+    "mtime": 1774716949.5686274,
+    "ast_hash": "7d70a967f2da3d2ddd7a7ed9b0238457",
+    "semantic_hash": "7d70a967f2da3d2ddd7a7ed9b0238457"
+  },
+  "src/test/java/com/rpg/rpghxh/login/filter/RateLimitFilterTest.java": {
+    "mtime": 1779661199.4980528,
+    "ast_hash": "6a1372ab5e2667858a5475d052e41ad8",
+    "semantic_hash": "6a1372ab5e2667858a5475d052e41ad8"
+  },
+  "src/test/java/com/rpg/rpghxh/login/service/JwtServiceTest.java": {
+    "mtime": 1774716948.2026181,
+    "ast_hash": "19ab547b4f3bdae29c711dadb262ed5b",
+    "semantic_hash": "19ab547b4f3bdae29c711dadb262ed5b"
+  },
+  "src/test/java/com/rpg/rpghxh/login/service/LoginServiceTest.java": {
+    "mtime": 1774149097.6296678,
+    "ast_hash": "5bea3c3350349ca1f16ad46c85fa49bc",
+    "semantic_hash": "5bea3c3350349ca1f16ad46c85fa49bc"
+  },
+  "src/test/java/com/rpg/rpghxh/register/controller/RegisterControllerTest.java": {
+    "mtime": 1774208112.1996841,
+    "ast_hash": "544302b48efd0040cf1088f731448008",
+    "semantic_hash": "544302b48efd0040cf1088f731448008"
+  },
+  "src/test/java/com/rpg/rpghxh/register/mapper/RegisterMapperTest.java": {
+    "mtime": 1774206302.6892788,
+    "ast_hash": "5b68f5091fb64fa0511c376d8b54568d",
+    "semantic_hash": "5b68f5091fb64fa0511c376d8b54568d"
+  },
+  "src/test/java/com/rpg/rpghxh/register/service/RegisterServiceTest.java": {
+    "mtime": 1774148007.9961226,
+    "ast_hash": "01d10009bf7dc92de7aba8e999c7f202",
+    "semantic_hash": "01d10009bf7dc92de7aba8e999c7f202"
+  },
+  "src/test/java/com/rpg/rpghxh/rooms/controller/RoomControllerTest.java": {
+    "mtime": 1779661162.1230488,
+    "ast_hash": "fb715c9fe2489ad5baa65cf61ee0d203",
+    "semantic_hash": "fb715c9fe2489ad5baa65cf61ee0d203"
+  },
+  "src/test/java/com/rpg/rpghxh/rooms/service/RedisInviteServiceTest.java": {
+    "mtime": 1779651089.5888922,
+    "ast_hash": "7f0b6f7612beae30e24f3559c12852a7",
+    "semantic_hash": "7f0b6f7612beae30e24f3559c12852a7"
+  },
+  "src/test/java/com/rpg/rpghxh/rooms/service/RoomServiceTest.java": {
+    "mtime": 1779655945.9407108,
+    "ast_hash": "b718531814ec8a551ad6907eccd999d7",
+    "semantic_hash": "b718531814ec8a551ad6907eccd999d7"
+  },
+  "src/test/java/com/rpg/rpghxh/shared/validation/PasswordMatchValidatorTest.java": {
+    "mtime": 1774206301.4672809,
+    "ast_hash": "358dc5d1f16ede24eda96a6c46981eed",
+    "semantic_hash": "358dc5d1f16ede24eda96a6c46981eed"
+  },
+  "src/test/java/com/rpg/rpghxh/shared/validation/PasswordValidatorTest.java": {
+    "mtime": 1774206299.6302838,
+    "ast_hash": "dad74d8f8b5a1c8db18bb74bb05759ba",
+    "semantic_hash": "dad74d8f8b5a1c8db18bb74bb05759ba"
+  },
+  ".github/bug_report.yaml": {
+    "mtime": 1773095869.9541779,
+    "ast_hash": "79117a162e04673fc6020a2c027b3630",
+    "semantic_hash": "79117a162e04673fc6020a2c027b3630"
+  },
+  ".github/feature_request.yaml": {
+    "mtime": 1773095836.6324785,
+    "ast_hash": "78afadb2edba9652f8f7f3434cbfe0d4",
+    "semantic_hash": "78afadb2edba9652f8f7f3434cbfe0d4"
+  },
+  "README.MD": {
+    "mtime": 1774715126.1654212,
+    "ast_hash": "05dcedde86673ce5952720cdc862679d",
+    "semantic_hash": "05dcedde86673ce5952720cdc862679d"
+  },
+  "docs/authentication.md": {
+    "mtime": 1774363621.5083683,
+    "ast_hash": "c5ba6b79aba17ba6de77178720a564e4",
+    "semantic_hash": "c5ba6b79aba17ba6de77178720a564e4"
+  },
+  "docs/initial_setup.md": {
+    "mtime": 1774363612.2573364,
+    "ast_hash": "8f179e334e26077883decbd7499222fe",
+    "semantic_hash": "8f179e334e26077883decbd7499222fe"
+  },
+  "docs/register.md": {
+    "mtime": 1774363618.8613591,
+    "ast_hash": "ae830d08a16c8c95238e864b997c7e69",
+    "semantic_hash": "ae830d08a16c8c95238e864b997c7e69"
+  },
+  "docs/rooms.md": {
+    "mtime": 1779657818.5494175,
+    "ast_hash": "0704392205f9bd86afd9de508b033a99",
+    "semantic_hash": "0704392205f9bd86afd9de508b033a99"
+  },
+  "src/test/resources/application.yaml": {
+    "mtime": 1774149112.8247108,
+    "ast_hash": "59bf06a68e6dfc65e2da927ce54fbf4e",
+    "semantic_hash": "59bf06a68e6dfc65e2da927ce54fbf4e"
+  },
+  "src/main/java/com/rpg/rpghxh/utils/imagens/KILLUA_IMAGEM_README.png": {
+    "mtime": 1774365125.4687402,
+    "ast_hash": "07aeaadaa82ea561c04a6b56ef3bb463",
+    "semantic_hash": "07aeaadaa82ea561c04a6b56ef3bb463"
+  }
+}
