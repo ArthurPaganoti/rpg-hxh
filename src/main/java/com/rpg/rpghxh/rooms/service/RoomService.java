@@ -184,7 +184,7 @@ public class RoomService {
                 .currentPlayers(room.getCurrentPlayers())
                 .maxPlayers(room.getMaxPlayers())
                 .createdAt(room.getCreatedAt())
-                .isMaster(room.getMaster().getId().equals(requester.getId()))
+                .master(room.getMaster().getId().equals(requester.getId()))
                 .build();
     }
 }

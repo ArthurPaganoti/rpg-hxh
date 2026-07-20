@@ -23,5 +23,5 @@ public class RoomResponseDTO {
     private LocalDateTime createdAt;
 
     @JsonProperty("isMaster")
-    private boolean isMaster;
+    private boolean master;
 }

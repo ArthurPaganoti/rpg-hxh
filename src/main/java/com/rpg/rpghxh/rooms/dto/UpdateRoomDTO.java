@@ -24,6 +24,6 @@ public class UpdateRoomDTO {
 
     @Min(value = 2, message = "A sala deve permitir no minimo 2 jogadores")
     @Max(value = 10, message = "A sala deve permitir no maximo 10 jogadores")
-    @Schema(description = "Novo numero maximo de jogadores (opcional)", example = "12")
+    @Schema(description = "Novo numero maximo de jogadores (opcional)", example = "8")
     private Integer maxPlayers;
 }

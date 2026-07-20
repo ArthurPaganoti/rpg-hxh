@@ -256,7 +256,7 @@ class RoomControllerTest {
                 .currentPlayers(2)
                 .maxPlayers(10)
                 .createdAt(LocalDateTime.now())
-                .isMaster(true)
+                .master(true)
                 .build();
 
         when(roomService.listMyRooms())
@@ -268,7 +268,8 @@ class RoomControllerTest {
                 .andExpect(jsonPath("$.message").value("Salas listadas com sucesso"))
                 .andExpect(jsonPath("$.content[0].name").value("Sala do Gon"))
                 .andExpect(jsonPath("$.content[0].currentPlayers").value(2))
-                .andExpect(jsonPath("$.content[0].isMaster").value(true));
+                .andExpect(jsonPath("$.content[0].isMaster").value(true))
+                .andExpect(jsonPath("$.content[0].master").doesNotExist());
     }
 
     @Test
