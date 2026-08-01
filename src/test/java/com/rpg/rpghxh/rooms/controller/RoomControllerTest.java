@@ -4,6 +4,7 @@ import com.rpg.rpghxh.config.SecurityConfig;
 import com.rpg.rpghxh.login.filter.JwtAuthenticationFilter;
 import com.rpg.rpghxh.login.filter.RateLimitFilter;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
@@ -12,6 +13,7 @@ import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
+import com.rpg.rpghxh.shared.exceptions.RoomMembershipRequiredException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -287,6 +289,73 @@ class RoomControllerTest {
     @Test
     void shouldDenyListRoomsWhenNotAuthenticated() throws Exception {
         mockMvc.perform(get("/rooms"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnRoomMembersWithMasterFlag() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        RoomMemberResponseDTO master = RoomMemberResponseDTO.builder()
+                .id(1L)
+                .name("Gon Freecss")
+                .joinedAt(LocalDateTime.now().minusHours(1))
+                .master(true)
+                .build();
+
+        RoomMemberResponseDTO player = RoomMemberResponseDTO.builder()
+                .id(2L)
+                .name("Killua Zoldyck")
+                .joinedAt(LocalDateTime.now())
+                .master(false)
+                .build();
+
+        when(roomService.listRoomMembers(roomId))
+                .thenReturn(ResponseDTO.success(java.util.List.of(master, player), "Membros listados com sucesso"));
+
+        mockMvc.perform(get("/rooms/" + roomId + "/members"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Membros listados com sucesso"))
+                .andExpect(jsonPath("$.content[0].name").value("Gon Freecss"))
+                .andExpect(jsonPath("$.content[0].isMaster").value(true))
+                .andExpect(jsonPath("$.content[0].master").doesNotExist())
+                .andExpect(jsonPath("$.content[1].name").value("Killua Zoldyck"))
+                .andExpect(jsonPath("$.content[1].isMaster").value(false));
+    }
+
+    @Test
+    @WithMockUser(username = "hisoka@hunter.com")
+    void shouldReturn403WhenNonMemberListsMembers() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.listRoomMembers(roomId)).thenThrow(new RoomMembershipRequiredException());
+
+        mockMvc.perform(get("/rooms/" + roomId + "/members"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"))
+                .andExpect(jsonPath("$.message").value("Apenas membros da sala podem acessar"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenListingMembersOfNonexistentRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.listRoomMembers(roomId)).thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(get("/rooms/" + roomId + "/members"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyListMembersWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(get("/rooms/" + roomId + "/members"))
                 .andExpect(status().isForbidden());
     }
 

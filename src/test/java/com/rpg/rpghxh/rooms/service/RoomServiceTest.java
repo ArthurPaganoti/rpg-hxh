@@ -8,6 +8,7 @@ import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
@@ -16,6 +17,7 @@ import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
+import com.rpg.rpghxh.shared.exceptions.RoomMembershipRequiredException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.junit.jupiter.api.AfterEach;
@@ -578,6 +580,90 @@ class RoomServiceTest {
 
         assertThrows(MaxPlayersBelowCurrentException.class, () -> roomService.updateRoom(roomId, dto));
         verify(roomRepository, never()).save(any(Room.class));
+    }
+
+    @Test
+    void listRoomMembers_AsMember_ShouldReturnMembersWithMasterFlag() {
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        RoomPlayer masterEntry = RoomPlayer.builder().room(room).user(masterUser).joinedAt(LocalDateTime.now().minusHours(1)).build();
+        RoomPlayer playerEntry = RoomPlayer.builder().room(room).user(player).joinedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(true);
+        when(roomPlayerRepository.findByRoomWithUser(room)).thenReturn(List.of(masterEntry, playerEntry));
+
+        ResponseDTO<List<RoomMemberResponseDTO>> response = roomService.listRoomMembers(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Membros listados com sucesso", response.getMessage());
+        assertEquals(2, response.getContent().size());
+        assertEquals("Gon Freecss", response.getContent().get(0).getName());
+        assertTrue(response.getContent().get(0).isMaster());
+        assertEquals("Killua Zoldyck", response.getContent().get(1).getName());
+        assertFalse(response.getContent().get(1).isMaster());
+    }
+
+    @Test
+    void listRoomMembers_AsMaster_ShouldReturnMembers() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        RoomPlayer masterEntry = RoomPlayer.builder().room(room).user(masterUser).joinedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, masterUser)).thenReturn(true);
+        when(roomPlayerRepository.findByRoomWithUser(room)).thenReturn(List.of(masterEntry));
+
+        ResponseDTO<List<RoomMemberResponseDTO>> response = roomService.listRoomMembers(roomId);
+
+        assertEquals(1, response.getContent().size());
+        assertTrue(response.getContent().get(0).isMaster());
+    }
+
+    @Test
+    void listRoomMembers_AsNonMember_ShouldThrowRoomMembershipRequiredException() {
+        UUID roomId = UUID.randomUUID();
+
+        User outsider = User.builder().id(3L).name("Hisoka Morow").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(outsider));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, outsider)).thenReturn(false);
+
+        assertThrows(RoomMembershipRequiredException.class, () -> roomService.listRoomMembers(roomId));
+        verify(roomPlayerRepository, never()).findByRoomWithUser(any());
+    }
+
+    @Test
+    void listRoomMembers_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.listRoomMembers(roomId));
     }
 
     @Test

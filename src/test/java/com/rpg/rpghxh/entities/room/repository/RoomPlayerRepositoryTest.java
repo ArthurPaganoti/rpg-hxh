@@ -84,6 +84,16 @@ class RoomPlayerRepositoryTest {
     }
 
     @Test
+    void findByRoomWithUser_ShouldReturnMembersOrderedByJoinDate() {
+        List<RoomPlayer> members = roomPlayerRepository.findByRoomWithUser(room1);
+
+        assertEquals(2, members.size());
+        assertEquals("Gon Freecss", members.get(0).getUser().getName());
+        assertEquals("Killua Zoldyck", members.get(1).getUser().getName());
+        assertTrue(members.get(0).getJoinedAt().compareTo(members.get(1).getJoinedAt()) <= 0);
+    }
+
+    @Test
     void countByRoom_ShouldCountPlayersInRoom() {
         assertEquals(2, roomPlayerRepository.countByRoom(room1));
         assertEquals(1, roomPlayerRepository.countByRoom(room2));
