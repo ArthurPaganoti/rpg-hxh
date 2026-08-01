@@ -4,6 +4,8 @@
 
 Aceito (2026-07-19) — ainda nao implementado. Este ADR registra a decisao arquitetural antes da implementacao.
 
+**Reafirmado (2026-08-01):** a decisao foi desafiada considerando turnos e rolagem de dados como possivel caso de WebSocket. Conclusao: turnos e dados sao acoes pontuais que exigem validacao/autorizacao no servidor (dado rolado no servidor, anti-cheat) — o padrao POST + broadcast deste ADR. Jogo por turnos e, por definicao, baixa frequencia. A visao de jogabilidade confirmada (turnos, dados, chat, fichas — sem mapa tatico arrastavel) mantem o SSE; o criterio de migracao para WebSocket na secao abaixo permanece o gatilho.
+
 ## Contexto
 
 As salas de RPG precisam de comunicacao em tempo real: chat entre jogadores, rolagem de dados visivel para todos, narracao do Mestre e, futuramente, atualizacoes de fichas de personagem. A escolha do mecanismo de transporte afeta autenticacao, infraestrutura e todo o codigo de jogabilidade que vira depois — por isso a decisao e registrada agora, antes da fase de personagens e mecanicas.
