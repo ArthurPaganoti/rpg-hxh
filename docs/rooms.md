@@ -156,6 +156,32 @@ Usuario sem salas recebe `content: []`.
 
 ---
 
+### `GET /rooms/{id}/members` — Listar Membros da Sala
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Qualquer membro da sala** pode acessar (validado via `findRoomAsMember`; nao-membros recebem 403).
+
+Lista os membros ordenados pela data de entrada (`joined_at ASC`). O Mestre e sempre o primeiro (entrou na criacao da sala). Query com `JOIN FETCH` do usuario para evitar N+1.
+
+#### Respostas
+
+**200 OK:**
+
+```json
+{
+  "success": true,
+  "message": "Membros listados com sucesso",
+  "content": [
+    { "id": 1, "name": "Gon Freecss", "joinedAt": "2026-08-01T12:00:00", "isMaster": true },
+    { "id": 2, "name": "Killua Zoldyck", "joinedAt": "2026-08-01T12:05:00", "isMaster": false }
+  ],
+  "timestamp": "2026-08-01T15:00:00Z"
+}
+```
+
+**403 Forbidden — Nao-membro** (`BUSINESS_ERROR`, "Apenas membros da sala podem acessar") e **404 Not Found — Sala nao encontrada**: mesmo formato dos endpoints anteriores.
+
+---
+
 ### `PATCH /rooms/{id}` — Atualizar Nome da Sala
 
 **Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode atualizar (validado via `findRoomAsMaster`).
@@ -282,8 +308,9 @@ O `RoomService` centraliza a autorizacao em dois helpers privados, reutilizados 
 |--------|------------------|
 | `getAuthenticatedUser()` | Valida que ha `Authentication` no `SecurityContextHolder` (guard contra NPE), extrai o email e busca o usuario (`UserNotFoundException` se nao encontrado) |
 | `findRoomAsMaster(UUID roomId)` | Chama `getAuthenticatedUser()`, busca a sala (`RoomNotFoundException` 404) e valida que o usuario autenticado e o Mestre (`RoomAccessDeniedException` 403) |
+| `findRoomAsMember(UUID roomId)` | Chama `getAuthenticatedUser()`, busca a sala (404) e valida que o usuario e membro via `existsByRoomAndUser` (`RoomMembershipRequiredException` 403) |
 
-**Regra:** toda nova rota restrita ao Mestre (deletar sala, atualizar nome, expulsar/banir membros, convite por email) **deve** reutilizar `findRoomAsMaster` em vez de duplicar a verificacao.
+**Regra:** toda nova rota restrita ao Mestre (deletar sala, atualizar nome, expulsar/banir membros, convite por email) **deve** reutilizar `findRoomAsMaster`; toda rota restrita a membros (detalhes da sala, eventos SSE do ADR 005) **deve** reutilizar `findRoomAsMember`.
 
 ### Armazenamento no Redis
 
@@ -318,6 +345,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Listagem de salas | `GET /rooms` retorna as salas do usuario autenticado (Mestre ou jogador), ordenadas por criacao decrescente |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
+| Membros da sala | Qualquer membro ve a lista de membros (`findRoomAsMember`); nao-membros recebem 403 |
 | Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
 | Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
 | Convite invalido | Retorna 404 se o hash nao existe ou expirou |

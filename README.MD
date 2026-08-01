@@ -210,6 +210,12 @@ Lista todas as salas em que o usuário autenticado participa (como Mestre ou jog
 
 ---
 
+### `GET /rooms/{id}/members` — Listar Membros da Sala
+
+Lista os membros da sala (id, nome, data de entrada e flag `isMaster`), ordenados pela entrada. **Qualquer membro** da sala pode acessar; não-membros recebem 403.
+
+---
+
 ### `PATCH /rooms/{id}` — Atualizar Nome da Sala
 
 Atualiza o nome e, opcionalmente, o máximo de jogadores da sala. **Apenas o Mestre** pode atualizar (403 para outros usuários). O máximo não pode ficar menor que o número atual de jogadores (409).
