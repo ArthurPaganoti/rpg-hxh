@@ -8,6 +8,7 @@ import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
@@ -16,6 +17,7 @@ import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
+import com.rpg.rpghxh.shared.exceptions.RoomMembershipRequiredException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
@@ -152,6 +154,21 @@ public class RoomService {
         return ResponseDTO.success("Sala deletada com sucesso");
     }
 
+    public ResponseDTO<List<RoomMemberResponseDTO>> listRoomMembers(UUID roomId) {
+        Room room = findRoomAsMember(roomId);
+
+        List<RoomMemberResponseDTO> members = roomPlayerRepository.findByRoomWithUser(room).stream()
+                .map(roomPlayer -> RoomMemberResponseDTO.builder()
+                        .id(roomPlayer.getUser().getId())
+                        .name(roomPlayer.getUser().getName())
+                        .joinedAt(roomPlayer.getJoinedAt())
+                        .master(roomPlayer.getUser().getId().equals(room.getMaster().getId()))
+                        .build())
+                .toList();
+
+        return ResponseDTO.success(members, "Membros listados com sucesso");
+    }
+
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -171,6 +188,19 @@ public class RoomService {
 
         if (!room.getMaster().getId().equals(user.getId())) {
             throw new RoomAccessDeniedException();
+        }
+
+        return room;
+    }
+
+    private Room findRoomAsMember(UUID roomId) {
+        User user = getAuthenticatedUser();
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (!roomPlayerRepository.existsByRoomAndUser(room, user)) {
+            throw new RoomMembershipRequiredException();
         }
 
         return room;

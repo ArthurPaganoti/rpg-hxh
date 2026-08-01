@@ -2,6 +2,7 @@ package com.rpg.rpghxh.rooms.controller;
 
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
@@ -71,6 +72,21 @@ public class RoomController {
     })
     public ResponseEntity<ResponseDTO<InviteResponseDTO>> getInviteLink(@PathVariable UUID id) {
         ResponseDTO<InviteResponseDTO> response = roomService.getInviteLink(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/members")
+    @Operation(summary = "Listar membros da sala", description = "Lista os membros da sala, ordenados pela data de entrada. Qualquer membro da sala pode acessar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Membros listados com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas membros da sala podem acessar",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<List<RoomMemberResponseDTO>>> listRoomMembers(@PathVariable UUID id) {
+        ResponseDTO<List<RoomMemberResponseDTO>> response = roomService.listRoomMembers(id);
         return ResponseEntity.ok(response);
     }
 

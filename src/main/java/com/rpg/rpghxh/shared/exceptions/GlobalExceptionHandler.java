@@ -25,8 +25,8 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
     }
 
-    @ExceptionHandler(RoomAccessDeniedException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleRoomAccessDeniedException(RoomAccessDeniedException ex) {
+    @ExceptionHandler({RoomAccessDeniedException.class, RoomMembershipRequiredException.class})
+    public ResponseEntity<ResponseDTO<Object>> handleRoomAccessDeniedException(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
