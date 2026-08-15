@@ -45,3 +45,6 @@ src/main/resources/application.yaml
 graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/cache/
+
+### Spec Kit (my-project) ###
+my-project/.github/
