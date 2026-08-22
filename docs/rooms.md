@@ -359,6 +359,42 @@ Remove o jogador alvo da sala na mesma transacao (com lock pessimista na sala):
 
 ---
 
+### `POST /rooms/{id}/bans/{userId}` — Banir Jogador
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode banir.
+
+Bane um jogador: remove-o da sala se for membro (recalcula `current_players`) e grava o banimento, impedindo que ele reentre **mesmo com um link de convite valido**. Na mesma transacao, com lock pessimista na sala:
+1. Carrega a sala (`findByIdWithLock`, 404 se nao existir) e valida Mestre (403)
+2. Alvo e o proprio Mestre -> 409 `CannotBanMasterException`
+3. Busca o usuario alvo (404 se nao existir)
+4. Se for membro, remove o `RoomPlayer` e recalcula `current_players`
+5. Grava `RoomBan` se ainda nao existir (**idempotente**: banir de novo nao duplica)
+
+**200 OK:** `{ "success": true, "message": "Jogador banido da sala com sucesso" }`
+
+| Codigo | Situacao |
+|--------|----------|
+| 403 | Nao e o Mestre da sala |
+| 404 | Sala ou usuario inexistente |
+| 409 | Tentativa de banir o Mestre |
+
+### `DELETE /rooms/{id}/bans/{userId}` — Desbanir Jogador
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode desbanir. Remove o `RoomBan`, permitindo que o jogador volte a entrar via convite.
+
+**200 OK:** `{ "success": true, "message": "Banimento removido com sucesso" }`
+
+| Codigo | Situacao |
+|--------|----------|
+| 403 | Nao e o Mestre da sala |
+| 404 | Sala/usuario inexistente ou jogador nao esta banido |
+
+### `GET /rooms/{id}/bans` — Listar Banidos
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode listar. Retorna os banidos (`id`, `name`, `bannedAt`) ordenados pela data do banimento. **403** para nao-Mestre, **404** se a sala nao existir.
+
+---
+
 ## Arquitetura
 
 A feature segue o padrao de **Functional Slice**:
@@ -466,6 +502,9 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
 | Sair da sala | Qualquer membro sai via `POST /rooms/{id}/leave`; remove o `RoomPlayer` e recalcula `current_players`; o Mestre nao pode sair (409), deve deletar a sala |
 | Remover membro | Apenas o Mestre remove via `DELETE /rooms/{id}/members/{userId}`; recalcula `current_players`; o Mestre nao pode ser removido (409); alvo precisa ser membro (404) |
+| Banir jogador | Apenas o Mestre bane via `POST /rooms/{id}/bans/{userId}`; remove da sala e impede reentrada mesmo com convite valido (`joinRoom` checa `room_bans` -> 403); o Mestre nao pode ser banido (409); idempotente |
+| Desbanir jogador | Apenas o Mestre desbane via `DELETE /rooms/{id}/bans/{userId}`; jogador nao banido -> 404 |
+| Cleanup no delete | `deleteRoom` remove `room_bans` alem de `room_players` e convite (FK sem cascade) |
 | Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
 | Convite invalido | Retorna 404 se o hash nao existe ou expirou |
 
@@ -517,6 +556,8 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
   "message": "A sala esta cheia"
 }
 ```
+
+**403 Forbidden — Jogador banido da sala** (`BUSINESS_ERROR`, "Voce foi banido desta sala"): `joinRoom` checa `room_bans` antes de adicionar, bloqueando a entrada mesmo com um convite valido.
 
 ---
 
@@ -578,6 +619,15 @@ CREATE TABLE room_players (
     user_id BIGINT NOT NULL REFERENCES users(id),
     joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT uk_room_players UNIQUE (room_id, user_id)
+);
+
+-- V6__Create_Room_Bans_Table.sql
+CREATE TABLE room_bans (
+    id BIGSERIAL PRIMARY KEY,
+    room_id UUID NOT NULL REFERENCES rooms(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    banned_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_room_bans UNIQUE (room_id, user_id)
 );
 ```
 

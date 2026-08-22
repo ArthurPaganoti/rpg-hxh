@@ -268,6 +268,22 @@ Deleta a sala permanentemente. **Apenas o Mestre** pode deletar (403 para outros
 
 ---
 
+### `POST /rooms/{id}/bans/{userId}` · `DELETE /rooms/{id}/bans/{userId}` · `GET /rooms/{id}/bans` — Banimento
+
+**Apenas o Mestre.** `POST` bane um jogador: remove-o da sala (se membro) e impede que reentre **mesmo com um link de convite válido** (`joinRoom` checa `room_bans` → 403). Idempotente; o Mestre não pode ser banido (409). `DELETE` desbane (404 se não estiver banido). `GET` lista os banidos. Ao deletar a sala, os banimentos são removidos junto.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Jogador banido da sala com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+---
+
 ### `POST /rooms/{id}/leave` — Sair da Sala
 
 Remove o jogador autenticado da sala e recalcula o número de jogadores. **Qualquer membro** pode sair, **exceto o Mestre** (409 — o Mestre sai deletando a sala). Não-membros recebem 403.
