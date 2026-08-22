@@ -46,7 +46,29 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("BUSINESS_ERROR", "Endpoint nao encontrado"));
     }
 
-    @ExceptionHandler({InvalidInviteException.class, PlayerNotInRoomException.class, BanNotFoundException.class})
+    @ExceptionHandler(InvalidFileTypeException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleInvalidFileTypeException(InvalidFileTypeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ResponseDTO.error("BUSINESS_ERROR", "Arquivo muito grande. Tamanho maximo: 10MB"));
+    }
+
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ResponseDTO<Object>> handleFileStorage(FileStorageException ex) {
+        log.error("Erro de armazenamento de arquivo", ex);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ResponseDTO.error("INTERNAL_ERROR", "Erro ao processar o arquivo"));
+    }
+
+    @ExceptionHandler({InvalidInviteException.class, PlayerNotInRoomException.class, BanNotFoundException.class, SheetNotFoundException.class})
     public ResponseEntity<ResponseDTO<Object>> handleInvalidInviteException(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)

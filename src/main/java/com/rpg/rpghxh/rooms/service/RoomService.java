@@ -6,6 +6,8 @@ import com.rpg.rpghxh.entities.room.entity.RoomPlayer;
 import com.rpg.rpghxh.entities.room.repository.RoomBanRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomPlayerRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomRepository;
+import com.rpg.rpghxh.entities.room.repository.RoomSheetRepository;
+import com.rpg.rpghxh.shared.storage.FileStorageService;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
@@ -45,6 +47,8 @@ public class RoomService {
     private final UserRepository userRepository;
     private final RoomPlayerRepository roomPlayerRepository;
     private final RoomBanRepository roomBanRepository;
+    private final RoomSheetRepository roomSheetRepository;
+    private final FileStorageService fileStorageService;
     private final RedisInviteService redisInviteService;
     private final String inviteBaseUrl;
 
@@ -52,12 +56,16 @@ public class RoomService {
                        UserRepository userRepository,
                        RoomPlayerRepository roomPlayerRepository,
                        RoomBanRepository roomBanRepository,
+                       RoomSheetRepository roomSheetRepository,
+                       FileStorageService fileStorageService,
                        RedisInviteService redisInviteService,
                        @Value("${INVITE_BASE_URL:https://api.rpg.com/rooms/join/}") String inviteBaseUrl) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
         this.roomPlayerRepository = roomPlayerRepository;
         this.roomBanRepository = roomBanRepository;
+        this.roomSheetRepository = roomSheetRepository;
+        this.fileStorageService = fileStorageService;
         this.redisInviteService = redisInviteService;
         this.inviteBaseUrl = inviteBaseUrl;
     }
@@ -164,6 +172,9 @@ public class RoomService {
         Room room = findRoomAsMaster(roomId);
 
         redisInviteService.removeInvite(roomId);
+        roomSheetRepository.findByRoomWithUser(room)
+                .forEach(sheet -> fileStorageService.delete(sheet.getObjectKey()));
+        roomSheetRepository.deleteByRoom(room);
         roomBanRepository.deleteByRoom(room);
         roomPlayerRepository.deleteByRoom(room);
         roomRepository.delete(room);
