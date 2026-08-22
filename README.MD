@@ -16,6 +16,7 @@ Uma API backend open source para RPG de mesa, construída com temática **Hunter
 | **PostgreSQL** | 15+ | Banco de dados relacional |
 | **Flyway** | — | Migrações de schema |
 | **Valkey** | 8+ | Cache, sessões JWT e rate limiting (fork BSD do Redis, protocolo compatível) |
+| **MinIO** | — | Armazenamento de objetos (arquivos de ficha; avatares/exports futuros — ADR 007) |
 | **Spring Security** | — | Autenticação e autorização |
 | **JWT (jjwt)** | 0.12.6 | Tokens de autenticação |
 | **Springdoc OpenAPI** | 3.0.2 | Documentação Swagger |
@@ -304,6 +305,14 @@ Remove o jogador autenticado da sala e recalcula o número de jogadores. **Qualq
 
 Remove um jogador da sala e recalcula o número de jogadores. **Apenas o Mestre** pode remover (403 para outros). O Mestre não pode ser removido (409). O alvo precisa ser membro da sala (404).
 
+---
+
+### `POST /rooms/{id}/sheet` · `GET /rooms/{id}/sheets` · `GET /rooms/{id}/sheets/{userId}/download` · `DELETE /rooms/{id}/sheet` — Fichas
+
+Área de fichas da sala. Cada jogador sobe **uma** ficha (PDF/DOC/DOCX/ODT, até 10MB) via `multipart/form-data`; um novo envio **substitui** a anterior. Um jogador só vê/baixa a **própria** ficha; o **Mestre** vê e baixa a de **todos**. Os bytes ficam no **MinIO** (ADR 007), os metadados no PostgreSQL, e o download passa pelo backend (MinIO privado, auth por JWT). Tipos inválidos → 415; acima de 10MB → 413.
+
+> Documentação completa: [`docs/sheets.md`](docs/sheets.md)
+
 **Response (200):**
 
 ```json
@@ -345,7 +354,7 @@ Campos `null` são omitidos automaticamente do JSON.
 ### Pré-requisitos
 
 - **Java 21**
-- **PostgreSQL 15+** e **Valkey 8+** — ou **Docker + Docker Compose** para subir ambos automaticamente
+- **PostgreSQL 15+**, **Valkey 8+** e **MinIO** — ou **Docker + Docker Compose** para subir os três automaticamente
 
 ### 1. Clone o repositório
 
@@ -376,6 +385,12 @@ VALKEY_PORT=6379
 VALKEY_DATABASE=0
 VALKEY_PASSWORD=sua_senha_valkey
 
+# MinIO (armazenamento de arquivos de ficha)
+MINIO_ENDPOINT=http://localhost:9000
+MINIO_ACCESS_KEY=sua_access_key
+MINIO_SECRET_KEY=sua_secret_key
+MINIO_BUCKET=rpg-hxh
+
 # JWT
 JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
 
@@ -385,7 +400,7 @@ INVITE_BASE_URL=http://localhost:8080/rooms/join/
 
 > O carregamento das variáveis é feito automaticamente pelo `DotenvConfig`, que injeta o `.env` como property source do Spring com prioridade máxima.
 
-### 3. Suba a infraestrutura (PostgreSQL + Valkey) com Docker
+### 3. Suba a infraestrutura (PostgreSQL + Valkey + MinIO) com Docker
 
 ```bash
 docker compose up -d
@@ -397,8 +412,9 @@ O `docker-compose.yml` lê as variáveis do `.env` e sobe:
 |---------|--------|-------|
 | PostgreSQL | `postgres:15-alpine` | `${DB_PORT}` (padrão 5432) |
 | Valkey | `valkey/valkey:8-alpine` (AOF + requirepass) | `${VALKEY_PORT}` (padrão 6379) |
+| MinIO | `minio/minio` | `${MINIO_PORT}` API 9000 · console 9001 |
 
-Ambos possuem healthcheck e volumes persistentes. Se preferir instalações locais de PostgreSQL e Valkey, pule este passo.
+Todos possuem healthcheck e volumes persistentes. O console do MinIO fica em `http://localhost:9001`. Se preferir instalações locais, pule este passo.
 
 ### 4. Execute a aplicação
 
