@@ -178,6 +178,37 @@ Usuario sem salas recebe `content: []`.
 
 ---
 
+### `GET /rooms/{id}` — Detalhes da Sala
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Qualquer membro da sala** pode acessar (nao-membros recebem 403).
+
+Retorna os dados de uma sala especifica. `isMaster` reflete se o usuario autenticado e o Mestre. Util para abrir a tela da sala diretamente por URL, sem depender da listagem `GET /rooms`.
+
+#### Respostas
+
+**200 OK:**
+
+```json
+{
+  "success": true,
+  "message": "Sala encontrada com sucesso",
+  "content": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Sala do Gon",
+    "masterName": "Gon Freecss",
+    "currentPlayers": 2,
+    "maxPlayers": 10,
+    "createdAt": "2026-08-01T12:00:00",
+    "isMaster": true
+  },
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+**403 Forbidden — Nao-membro** (`BUSINESS_ERROR`, "Apenas membros da sala podem acessar") e **404 Not Found — Sala nao encontrada**: mesmo formato dos demais endpoints.
+
+---
+
 ### `GET /rooms/{id}/members` — Listar Membros da Sala
 
 **Autenticacao**: Obrigatoria (Bearer JWT). **Qualquer membro da sala** pode acessar (validado via `findRoomAsMember`; nao-membros recebem 403).
@@ -428,6 +459,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Limite de jogadores | `max_players` configuravel na criacao (2 a 10); padrao 10 quando omitido |
 | Atualizacao de nome | Apenas o Mestre atualiza (`findRoomAsMaster`); nome entre 3 e 100 caracteres |
 | Listagem de salas | `GET /rooms` retorna as salas do usuario autenticado (Mestre ou jogador), ordenadas por criacao decrescente |
+| Detalhes da sala | `GET /rooms/{id}` retorna uma sala especifica; qualquer membro acessa (`findRoomAsMember`), nao-membros recebem 403 |
 | Join via convite | Jogador autenticado entra na sala via `GET /rooms/join/{hash}` |
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
 | Membros da sala | Qualquer membro ve a lista de membros (`findRoomAsMember`); nao-membros recebem 403 |

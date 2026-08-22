@@ -226,6 +226,12 @@ Lista todas as salas em que o usuário autenticado participa (como Mestre ou jog
 
 ---
 
+### `GET /rooms/{id}` — Detalhes da Sala
+
+Retorna os dados de uma sala específica (nome, mestre, jogadores, `isMaster`). **Qualquer membro** da sala pode acessar; não-membros recebem 403. Permite abrir a tela da sala direto por URL, sem depender da listagem.
+
+---
+
 ### `GET /rooms/{id}/members` — Listar Membros da Sala
 
 Lista os membros da sala (id, nome, data de entrada e flag `isMaster`), ordenados pela entrada. **Qualquer membro** da sala pode acessar; não-membros recebem 403.
