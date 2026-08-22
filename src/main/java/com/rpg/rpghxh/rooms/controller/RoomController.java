@@ -125,6 +125,23 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{id}/members/{userId}")
+    @Operation(summary = "Remover membro da sala", description = "Remove um jogador da sala e recalcula o numero de jogadores. Apenas o Mestre da sala pode remover. O Mestre nao pode ser removido.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Jogador removido da sala com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode remover jogadores",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada, usuario nao encontrado ou jogador nao esta na sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "409", description = "O Mestre nao pode ser removido da sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> removeMember(@PathVariable UUID id, @PathVariable Long userId) {
+        ResponseDTO<Void> response = roomService.removeMember(id, userId);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{id}/leave")
     @Operation(summary = "Sair da sala", description = "Remove o jogador autenticado da sala e recalcula o numero de jogadores. O Mestre nao pode sair; deve deletar a sala.")
     @ApiResponses(value = {

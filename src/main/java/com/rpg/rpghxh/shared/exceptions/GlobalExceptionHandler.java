@@ -46,14 +46,14 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("BUSINESS_ERROR", "Endpoint nao encontrado"));
     }
 
-    @ExceptionHandler(InvalidInviteException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleInvalidInviteException(InvalidInviteException ex) {
+    @ExceptionHandler({InvalidInviteException.class, PlayerNotInRoomException.class})
+    public ResponseEntity<ResponseDTO<Object>> handleInvalidInviteException(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
     }
 
-    @ExceptionHandler({RoomFullException.class, PlayerAlreadyInRoomException.class, MaxPlayersBelowCurrentException.class, MasterCannotLeaveRoomException.class})
+    @ExceptionHandler({RoomFullException.class, PlayerAlreadyInRoomException.class, MaxPlayersBelowCurrentException.class, MasterCannotLeaveRoomException.class, CannotRemoveMasterException.class})
     public ResponseEntity<ResponseDTO<Object>> handleConflictExceptions(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
