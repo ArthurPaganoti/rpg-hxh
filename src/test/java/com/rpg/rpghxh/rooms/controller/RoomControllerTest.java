@@ -492,6 +492,66 @@ class RoomControllerTest {
 
     @Test
     @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnRoomDetailsWhenMember() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        RoomResponseDTO roomResponse = RoomResponseDTO.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .masterName("Gon Freecss")
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .master(true)
+                .build();
+
+        when(roomService.getRoom(roomId))
+                .thenReturn(ResponseDTO.success(roomResponse, "Sala encontrada com sucesso"));
+
+        mockMvc.perform(get("/rooms/" + roomId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.content.name").value("Sala do Gon"))
+                .andExpect(jsonPath("$.content.isMaster").value(true))
+                .andExpect(jsonPath("$.content.master").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "hisoka@hunter.com")
+    void shouldReturn403WhenNonMemberGetsRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.getRoom(roomId)).thenThrow(new RoomMembershipRequiredException());
+
+        mockMvc.perform(get("/rooms/" + roomId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenGettingNonexistentRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.getRoom(roomId)).thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(get("/rooms/" + roomId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyGetRoomWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(get("/rooms/" + roomId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
     void shouldReturn200WhenMasterRevokesInvite() throws Exception {
         UUID roomId = UUID.randomUUID();
 

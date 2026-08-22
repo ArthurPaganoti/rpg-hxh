@@ -585,6 +585,87 @@ class RoomServiceTest {
         verify(roomRepository, never()).save(any(Room.class));
     }
 
+    // --- getRoom tests ---
+
+    @Test
+    void getRoom_AsMember_ShouldReturnRoomData() {
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(true);
+
+        ResponseDTO<RoomResponseDTO> response = roomService.getRoom(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Sala encontrada com sucesso", response.getMessage());
+        assertEquals("Sala do Gon", response.getContent().getName());
+        assertEquals("Gon Freecss", response.getContent().getMasterName());
+        assertFalse(response.getContent().isMaster());
+    }
+
+    @Test
+    void getRoom_AsMaster_ShouldReturnRoomWithMasterFlag() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, masterUser)).thenReturn(true);
+
+        ResponseDTO<RoomResponseDTO> response = roomService.getRoom(roomId);
+
+        assertTrue(response.getContent().isMaster());
+    }
+
+    @Test
+    void getRoom_AsNonMember_ShouldThrowRoomMembershipRequiredException() {
+        UUID roomId = UUID.randomUUID();
+
+        User outsider = User.builder().id(3L).name("Hisoka Morow").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(outsider));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, outsider)).thenReturn(false);
+
+        assertThrows(RoomMembershipRequiredException.class, () -> roomService.getRoom(roomId));
+    }
+
+    @Test
+    void getRoom_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.getRoom(roomId));
+    }
+
     @Test
     void listRoomMembers_AsMember_ShouldReturnMembersWithMasterFlag() {
         UUID roomId = UUID.randomUUID();
