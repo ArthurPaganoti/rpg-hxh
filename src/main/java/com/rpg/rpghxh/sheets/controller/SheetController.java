@@ -32,7 +32,7 @@ public class SheetController {
     }
 
     @PostMapping(value = "/sheet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Enviar/substituir a propria ficha", description = "Envia a ficha do jogador autenticado para a sala (PDF, DOC, DOCX ou ODT, ate 10MB). Cada jogador tem uma unica ficha por sala; um novo envio substitui a anterior. Qualquer membro da sala pode enviar.")
+    @Operation(summary = "Enviar/substituir a propria ficha", description = "Envia a ficha do jogador autenticado para a sala (PDF, DOC, DOCX ou ODT, ate 50MB). Cada jogador tem uma unica ficha por sala; um novo envio substitui a anterior. Qualquer membro da sala pode enviar.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Ficha enviada com sucesso",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
@@ -40,7 +40,7 @@ public class SheetController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
         @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
-        @ApiResponse(responseCode = "413", description = "Arquivo maior que 10MB",
+        @ApiResponse(responseCode = "413", description = "Arquivo maior que 50MB",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
         @ApiResponse(responseCode = "415", description = "Tipo de arquivo nao permitido",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))

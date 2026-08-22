@@ -2,7 +2,7 @@
 
 ## Visao Geral
 
-Dentro de cada sala existe a area de **Fichas**: os jogadores sobem o arquivo da sua ficha (PDF, DOC, DOCX ou ODT, ate 10MB). Cada jogador tem **uma unica ficha por sala** — um novo envio substitui a anterior. Um jogador so tem acesso a **sua** ficha; o **Mestre** visualiza e baixa a ficha de **todos**.
+Dentro de cada sala existe a area de **Fichas**: os jogadores sobem o arquivo da sua ficha (PDF, DOC, DOCX ou ODT, ate 50MB). Cada jogador tem **uma unica ficha por sala** — um novo envio substitui a anterior. Um jogador so tem acesso a **sua** ficha; o **Mestre** visualiza e baixa a ficha de **todos**.
 
 Segue o ADR 007: os **bytes** ficam no **MinIO**; os **metadados** (dono, sala, nome, tipo, tamanho, chave do objeto) no **PostgreSQL** (`room_sheets`). O arquivo trafega **pelo backend** — o MinIO nao e exposto publicamente e a autorizacao usa o JWT.
 
@@ -18,7 +18,7 @@ Todos exigem Bearer JWT. Base: `/rooms/{id}`.
 | 200 | `Ficha enviada com sucesso` |
 | 403 | Nao e membro da sala |
 | 404 | Sala nao encontrada |
-| 413 | Arquivo maior que 10MB |
+| 413 | Arquivo maior que 50MB |
 | 415 | Tipo nao permitido (aceita PDF, DOC, DOCX, ODT) |
 
 ### `GET /rooms/{id}/sheets` — Listar fichas
@@ -38,7 +38,7 @@ Remove o objeto no MinIO e a linha. **Qualquer membro**, apenas sobre a **propri
 | Visibilidade | Jogador ve so a propria ficha; Mestre ve todas |
 | Download | Dono baixa a sua; Mestre baixa a de qualquer um |
 | Tipos aceitos | PDF, DOC, DOCX, ODT (por `content-type`) |
-| Tamanho | Ate 10MB (`spring.servlet.multipart.max-file-size`) |
+| Tamanho | Ate 50MB (`spring.servlet.multipart.max-file-size`) |
 | Cleanup | `deleteRoom` remove os objetos no MinIO e as linhas de `room_sheets` |
 
 ## Armazenamento (MinIO)

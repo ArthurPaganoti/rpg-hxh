@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ResponseDTO<Object>> handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
         return ResponseEntity
                 .status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(ResponseDTO.error("BUSINESS_ERROR", "Arquivo muito grande. Tamanho maximo: 10MB"));
+                .body(ResponseDTO.error("BUSINESS_ERROR", "Arquivo muito grande. Tamanho maximo: 50MB"));
     }
 
     @ExceptionHandler(FileStorageException.class)

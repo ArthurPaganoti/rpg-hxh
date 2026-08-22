@@ -309,7 +309,7 @@ Remove um jogador da sala e recalcula o número de jogadores. **Apenas o Mestre*
 
 ### `POST /rooms/{id}/sheet` · `GET /rooms/{id}/sheets` · `GET /rooms/{id}/sheets/{userId}/download` · `DELETE /rooms/{id}/sheet` — Fichas
 
-Área de fichas da sala. Cada jogador sobe **uma** ficha (PDF/DOC/DOCX/ODT, até 10MB) via `multipart/form-data`; um novo envio **substitui** a anterior. Um jogador só vê/baixa a **própria** ficha; o **Mestre** vê e baixa a de **todos**. Os bytes ficam no **MinIO** (ADR 007), os metadados no PostgreSQL, e o download passa pelo backend (MinIO privado, auth por JWT). Tipos inválidos → 415; acima de 10MB → 413.
+Área de fichas da sala. Cada jogador sobe **uma** ficha (PDF/DOC/DOCX/ODT, até 50MB) via `multipart/form-data`; um novo envio **substitui** a anterior. Um jogador só vê/baixa a **própria** ficha; o **Mestre** vê e baixa a de **todos**. Os bytes ficam no **MinIO** (ADR 007), os metadados no PostgreSQL, e o download passa pelo backend (MinIO privado, auth por JWT). Tipos inválidos → 415; acima de 50MB → 413.
 
 > Documentação completa: [`docs/sheets.md`](docs/sheets.md)
 
