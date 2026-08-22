@@ -732,6 +732,59 @@ class RoomServiceTest {
         verify(roomRepository, never()).delete(any(Room.class));
     }
 
+    // --- revokeInvite tests ---
+
+    @Test
+    void revokeInvite_AsMaster_ShouldRemoveInvite() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        ResponseDTO<Void> response = roomService.revokeInvite(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Convite revogado com sucesso", response.getMessage());
+        verify(redisInviteService).removeInvite(roomId);
+    }
+
+    @Test
+    void revokeInvite_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User otherUser = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+        User roomMaster = User.builder().id(99L).name("Outro Mestre").email("master@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Outro")
+                .master(roomMaster)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(otherUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.revokeInvite(roomId));
+        verify(redisInviteService, never()).removeInvite(any());
+    }
+
+    @Test
+    void revokeInvite_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.revokeInvite(roomId));
+        verify(redisInviteService, never()).removeInvite(any());
+    }
+
     // --- removeMember tests ---
 
     @Test

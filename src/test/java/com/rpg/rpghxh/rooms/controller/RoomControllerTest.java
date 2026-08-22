@@ -492,6 +492,54 @@ class RoomControllerTest {
 
     @Test
     @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterRevokesInvite() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.revokeInvite(roomId))
+                .thenReturn(ResponseDTO.success("Convite revogado com sucesso"));
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Convite revogado com sucesso"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterRevokesInvite() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.revokeInvite(roomId)).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenRevokingInviteOfNonexistentRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.revokeInvite(roomId)).thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyRevokeInviteWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/invite"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
     void shouldReturn200WhenMasterRemovesMember() throws Exception {
         UUID roomId = UUID.randomUUID();
 
