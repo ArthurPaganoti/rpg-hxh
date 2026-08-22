@@ -244,6 +244,36 @@ Deleta a sala permanentemente, removendo na mesma transacao:
 
 ---
 
+### `POST /rooms/{id}/leave` — Sair da Sala
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Qualquer membro** da sala pode sair, **exceto o Mestre**.
+
+Remove o jogador autenticado da sala na mesma transacao (com lock pessimista na sala para recalculo seguro):
+1. Carrega a sala com `findByIdWithLock` (404 se nao existir)
+2. Se o autenticado for o Mestre -> 409 (o Mestre sai deletando a sala, nao via leave)
+3. Localiza o `RoomPlayer` do usuario (`findByRoomAndUser`) -> 403 se nao for membro
+4. Remove o `RoomPlayer` e recalcula `currentPlayers = countByRoom`
+
+#### Respostas
+
+**200 OK — Saiu da Sala:**
+
+```json
+{
+  "success": true,
+  "message": "Voce saiu da sala com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+| Codigo | Situacao | Mensagem |
+|--------|----------|----------|
+| 403 | Nao e membro da sala | Apenas membros da sala podem acessar |
+| 404 | Sala nao encontrada | Sala nao encontrada |
+| 409 | Mestre tentando sair | O Mestre nao pode sair da sala. Delete a sala em vez disso |
+
+---
+
 ## Arquitetura
 
 A feature segue o padrao de **Functional Slice**:
@@ -347,6 +377,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Sala cheia | Retorna 409 se `current_players >= max_players` |
 | Membros da sala | Qualquer membro ve a lista de membros (`findRoomAsMember`); nao-membros recebem 403 |
 | Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
+| Sair da sala | Qualquer membro sai via `POST /rooms/{id}/leave`; remove o `RoomPlayer` e recalcula `current_players`; o Mestre nao pode sair (409), deve deletar a sala |
 | Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
 | Convite invalido | Retorna 404 se o hash nao existe ou expirou |
 

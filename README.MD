@@ -246,6 +246,22 @@ Deleta a sala permanentemente. **Apenas o Mestre** pode deletar (403 para outros
 
 ---
 
+### `POST /rooms/{id}/leave` — Sair da Sala
+
+Remove o jogador autenticado da sala e recalcula o número de jogadores. **Qualquer membro** pode sair, **exceto o Mestre** (409 — o Mestre sai deletando a sala). Não-membros recebem 403.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Voce saiu da sala com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+---
+
 ### Formato Padrão de Resposta (`ResponseDTO<T>`)
 
 Todos os endpoints seguem o mesmo formato:
