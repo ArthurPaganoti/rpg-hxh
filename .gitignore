@@ -56,3 +56,6 @@ my-project/
 .opencode/
 .github/copilot-instructions.md
 AGENTS.md
+
+# Serena MCP
+.serena/
