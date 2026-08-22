@@ -10,6 +10,7 @@ import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.GlobalExceptionHandler;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
@@ -484,6 +485,66 @@ class RoomControllerTest {
         UUID roomId = UUID.randomUUID();
 
         mockMvc.perform(delete("/rooms/" + roomId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn200WhenMemberLeavesRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.leaveRoom(roomId)).thenReturn(ResponseDTO.success("Voce saiu da sala com sucesso"));
+
+        mockMvc.perform(post("/rooms/" + roomId + "/leave"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Voce saiu da sala com sucesso"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn409WhenMasterLeavesRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.leaveRoom(roomId)).thenThrow(new MasterCannotLeaveRoomException());
+
+        mockMvc.perform(post("/rooms/" + roomId + "/leave"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "hisoka@hunter.com")
+    void shouldReturn403WhenNonMemberLeavesRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.leaveRoom(roomId)).thenThrow(new RoomMembershipRequiredException());
+
+        mockMvc.perform(post("/rooms/" + roomId + "/leave"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenLeavingNonexistentRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.leaveRoom(roomId)).thenThrow(new RoomNotFoundException());
+
+        mockMvc.perform(post("/rooms/" + roomId + "/leave"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyLeaveRoomWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(post("/rooms/" + roomId + "/leave"))
                 .andExpect(status().isForbidden());
     }
 

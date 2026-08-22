@@ -98,4 +98,14 @@ class RoomPlayerRepositoryTest {
         assertEquals(2, roomPlayerRepository.countByRoom(room1));
         assertEquals(1, roomPlayerRepository.countByRoom(room2));
     }
+
+    @Test
+    void findByRoomAndUser_WhenMember_ShouldReturnRoomPlayer() {
+        assertTrue(roomPlayerRepository.findByRoomAndUser(room1, player).isPresent());
+    }
+
+    @Test
+    void findByRoomAndUser_WhenNotMember_ShouldReturnEmpty() {
+        assertTrue(roomPlayerRepository.findByRoomAndUser(room2, player).isEmpty());
+    }
 }

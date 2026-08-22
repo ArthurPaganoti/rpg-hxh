@@ -13,6 +13,7 @@ import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
@@ -727,6 +728,95 @@ class RoomServiceTest {
 
         assertThrows(RoomNotFoundException.class, () -> roomService.deleteRoom(roomId));
         verify(roomRepository, never()).delete(any(Room.class));
+    }
+
+    // --- leaveRoom tests ---
+
+    @Test
+    void leaveRoom_AsMember_ShouldRemovePlayerAndRecalculateCurrentPlayers() {
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .build();
+
+        RoomPlayer playerEntry = RoomPlayer.builder().room(room).user(player).joinedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.findByRoomAndUser(room, player)).thenReturn(Optional.of(playerEntry));
+        when(roomPlayerRepository.countByRoom(room)).thenReturn(1L);
+        when(roomRepository.save(room)).thenReturn(room);
+
+        ResponseDTO<Void> response = roomService.leaveRoom(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Voce saiu da sala com sucesso", response.getMessage());
+        verify(roomPlayerRepository).delete(playerEntry);
+
+        ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
+        verify(roomRepository).save(roomCaptor.capture());
+        assertEquals(1, roomCaptor.getValue().getCurrentPlayers());
+    }
+
+    @Test
+    void leaveRoom_AsMaster_ShouldThrowMasterCannotLeaveRoomException() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(MasterCannotLeaveRoomException.class, () -> roomService.leaveRoom(roomId));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+        verify(roomRepository, never()).save(any(Room.class));
+    }
+
+    @Test
+    void leaveRoom_AsNonMember_ShouldThrowRoomMembershipRequiredException() {
+        UUID roomId = UUID.randomUUID();
+
+        User outsider = User.builder().id(3L).name("Hisoka Morow").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(outsider));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.findByRoomAndUser(room, outsider)).thenReturn(Optional.empty());
+
+        assertThrows(RoomMembershipRequiredException.class, () -> roomService.leaveRoom(roomId));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+        verify(roomRepository, never()).save(any(Room.class));
+    }
+
+    @Test
+    void leaveRoom_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.leaveRoom(roomId));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
     }
 
     @Test
