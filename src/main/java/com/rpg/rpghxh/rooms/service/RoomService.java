@@ -216,6 +216,19 @@ public class RoomService {
         return ResponseDTO.success("Jogador removido da sala com sucesso");
     }
 
+    public ResponseDTO<RoomResponseDTO> getRoom(UUID roomId) {
+        User user = getAuthenticatedUser();
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (!roomPlayerRepository.existsByRoomAndUser(room, user)) {
+            throw new RoomMembershipRequiredException();
+        }
+
+        return ResponseDTO.success(buildRoomResponse(room, user), "Sala encontrada com sucesso");
+    }
+
     public ResponseDTO<List<RoomMemberResponseDTO>> listRoomMembers(UUID roomId) {
         Room room = findRoomAsMember(roomId);
 

@@ -60,6 +60,21 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "Detalhes da sala", description = "Retorna os dados de uma sala especifica. Qualquer membro da sala pode acessar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Sala encontrada com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas membros da sala podem acessar",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<RoomResponseDTO>> getRoom(@PathVariable UUID id) {
+        ResponseDTO<RoomResponseDTO> response = roomService.getRoom(id);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}/invite")
     @Operation(summary = "Gerar link de convite", description = "Gera ou recupera o link de convite da sala. Apenas o Mestre da sala pode acessar.")
     @ApiResponses(value = {
