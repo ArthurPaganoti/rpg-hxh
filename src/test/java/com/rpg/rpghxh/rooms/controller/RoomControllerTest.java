@@ -10,8 +10,10 @@ import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.GlobalExceptionHandler;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
+import com.rpg.rpghxh.shared.exceptions.PlayerNotInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomMembershipRequiredException;
@@ -485,6 +487,67 @@ class RoomControllerTest {
         UUID roomId = UUID.randomUUID();
 
         mockMvc.perform(delete("/rooms/" + roomId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterRemovesMember() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.removeMember(roomId, 2L))
+                .thenReturn(ResponseDTO.success("Jogador removido da sala com sucesso"));
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/members/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Jogador removido da sala com sucesso"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterRemovesMember() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.removeMember(roomId, 2L)).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/members/2"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn409WhenRemovingMaster() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.removeMember(roomId, 1L)).thenThrow(new CannotRemoveMasterException());
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/members/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenRemovingPlayerNotInRoom() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.removeMember(roomId, 2L)).thenThrow(new PlayerNotInRoomException());
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/members/2"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyRemoveMemberWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/members/2"))
                 .andExpect(status().isForbidden());
     }
 

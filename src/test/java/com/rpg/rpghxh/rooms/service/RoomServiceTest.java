@@ -12,8 +12,10 @@ import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
+import com.rpg.rpghxh.shared.exceptions.PlayerNotInRoomException;
 import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
@@ -728,6 +730,130 @@ class RoomServiceTest {
 
         assertThrows(RoomNotFoundException.class, () -> roomService.deleteRoom(roomId));
         verify(roomRepository, never()).delete(any(Room.class));
+    }
+
+    // --- removeMember tests ---
+
+    @Test
+    void removeMember_AsMaster_ShouldRemovePlayerAndRecalculateCurrentPlayers() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .build();
+
+        RoomPlayer targetEntry = RoomPlayer.builder().room(room).user(target).joinedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomPlayerRepository.findByRoomAndUser(room, target)).thenReturn(Optional.of(targetEntry));
+        when(roomPlayerRepository.countByRoom(room)).thenReturn(1L);
+        when(roomRepository.save(room)).thenReturn(room);
+
+        ResponseDTO<Void> response = roomService.removeMember(roomId, 2L);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Jogador removido da sala com sucesso", response.getMessage());
+        verify(roomPlayerRepository).delete(targetEntry);
+
+        ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
+        verify(roomRepository).save(roomCaptor.capture());
+        assertEquals(1, roomCaptor.getValue().getCurrentPlayers());
+    }
+
+    @Test
+    void removeMember_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User requester = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        User roomMaster = User.builder().id(99L).name("Outro Mestre").email("master@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Outro")
+                .master(roomMaster)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(requester));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.removeMember(roomId, 3L));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+    }
+
+    @Test
+    void removeMember_TargetIsMaster_ShouldThrowCannotRemoveMasterException() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(CannotRemoveMasterException.class, () -> roomService.removeMember(roomId, 1L));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+    }
+
+    @Test
+    void removeMember_TargetUserNotFound_ShouldThrowUserNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> roomService.removeMember(roomId, 2L));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+    }
+
+    @Test
+    void removeMember_TargetNotInRoom_ShouldThrowPlayerNotInRoomException() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomPlayerRepository.findByRoomAndUser(room, target)).thenReturn(Optional.empty());
+
+        assertThrows(PlayerNotInRoomException.class, () -> roomService.removeMember(roomId, 2L));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+    }
+
+    @Test
+    void removeMember_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.removeMember(roomId, 2L));
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
     }
 
     // --- leaveRoom tests ---
