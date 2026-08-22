@@ -4,12 +4,15 @@ import com.rpg.rpghxh.config.SecurityConfig;
 import com.rpg.rpghxh.login.filter.JwtAuthenticationFilter;
 import com.rpg.rpghxh.login.filter.RateLimitFilter;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.GlobalExceptionHandler;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.BanNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.CannotBanMasterException;
 import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
@@ -33,6 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -716,6 +720,123 @@ class RoomControllerTest {
         UUID roomId = UUID.randomUUID();
 
         mockMvc.perform(post("/rooms/" + roomId + "/leave"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterBansUser() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.banUser(roomId, 2L))
+                .thenReturn(ResponseDTO.success("Jogador banido da sala com sucesso"));
+
+        mockMvc.perform(post("/rooms/" + roomId + "/bans/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Jogador banido da sala com sucesso"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterBansUser() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.banUser(roomId, 2L)).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(post("/rooms/" + roomId + "/bans/2"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn409WhenBanningMaster() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.banUser(roomId, 1L)).thenThrow(new CannotBanMasterException());
+
+        mockMvc.perform(post("/rooms/" + roomId + "/bans/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyBanUserWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(post("/rooms/" + roomId + "/bans/2"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterUnbansUser() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.unbanUser(roomId, 2L))
+                .thenReturn(ResponseDTO.success("Banimento removido com sucesso"));
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/bans/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Banimento removido com sucesso"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenUnbanningNonBannedUser() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.unbanUser(roomId, 2L)).thenThrow(new BanNotFoundException());
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/bans/2"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturnBanListWhenMaster() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        RoomBanResponseDTO ban = RoomBanResponseDTO.builder()
+                .id(2L)
+                .name("Killua Zoldyck")
+                .bannedAt(LocalDateTime.now())
+                .build();
+
+        when(roomService.listBans(roomId))
+                .thenReturn(ResponseDTO.success(List.of(ban), "Banidos listados com sucesso"));
+
+        mockMvc.perform(get("/rooms/" + roomId + "/bans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.content[0].id").value(2))
+                .andExpect(jsonPath("$.content[0].name").value("Killua Zoldyck"));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterListsBans() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.listBans(roomId)).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(get("/rooms/" + roomId + "/bans"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
+    }
+
+    @Test
+    void shouldDenyListBansWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        mockMvc.perform(get("/rooms/" + roomId + "/bans"))
                 .andExpect(status().isForbidden());
     }
 

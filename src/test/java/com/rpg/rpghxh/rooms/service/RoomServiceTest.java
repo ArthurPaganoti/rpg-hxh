@@ -1,17 +1,22 @@
 package com.rpg.rpghxh.rooms.service;
 
 import com.rpg.rpghxh.entities.room.entity.Room;
+import com.rpg.rpghxh.entities.room.entity.RoomBan;
 import com.rpg.rpghxh.entities.room.entity.RoomPlayer;
+import com.rpg.rpghxh.entities.room.repository.RoomBanRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomPlayerRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.BanNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.CannotBanMasterException;
 import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
@@ -22,6 +27,7 @@ import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomMembershipRequiredException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.UserBannedException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +62,9 @@ class RoomServiceTest {
     private RoomPlayerRepository roomPlayerRepository;
 
     @Mock
+    private RoomBanRepository roomBanRepository;
+
+    @Mock
     private RedisInviteService redisInviteService;
 
     private RoomService roomService;
@@ -65,7 +74,7 @@ class RoomServiceTest {
     @BeforeEach
     void setUp() {
         roomService = new RoomService(roomRepository, userRepository, roomPlayerRepository,
-                redisInviteService, "https://api.rpg.com/rooms/join/");
+                roomBanRepository, redisInviteService, "https://api.rpg.com/rooms/join/");
 
         masterUser = User.builder()
                 .id(1L)
@@ -768,6 +777,7 @@ class RoomServiceTest {
         assertTrue(response.isSuccess());
         assertEquals("Sala deletada com sucesso", response.getMessage());
         verify(redisInviteService).removeInvite(roomId);
+        verify(roomBanRepository).deleteByRoom(room);
         verify(roomPlayerRepository).deleteByRoom(room);
         verify(roomRepository).delete(room);
     }
@@ -988,6 +998,258 @@ class RoomServiceTest {
 
         assertThrows(RoomNotFoundException.class, () -> roomService.removeMember(roomId, 2L));
         verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+    }
+
+    // --- ban tests ---
+
+    @Test
+    void banUser_AsMaster_WhenTargetIsMember_ShouldRemoveAndBan() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(2)
+                .maxPlayers(10)
+                .build();
+
+        RoomPlayer targetEntry = RoomPlayer.builder().room(room).user(target).joinedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomPlayerRepository.findByRoomAndUser(room, target)).thenReturn(Optional.of(targetEntry));
+        when(roomPlayerRepository.countByRoom(room)).thenReturn(1L);
+        when(roomRepository.save(room)).thenReturn(room);
+        when(roomBanRepository.existsByRoomAndUser(room, target)).thenReturn(false);
+
+        ResponseDTO<Void> response = roomService.banUser(roomId, 2L);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Jogador banido da sala com sucesso", response.getMessage());
+        verify(roomPlayerRepository).delete(targetEntry);
+        verify(roomBanRepository).save(any(RoomBan.class));
+    }
+
+    @Test
+    void banUser_AsMaster_WhenTargetNotMember_ShouldBanWithoutRemoving() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomPlayerRepository.findByRoomAndUser(room, target)).thenReturn(Optional.empty());
+        when(roomBanRepository.existsByRoomAndUser(room, target)).thenReturn(false);
+
+        ResponseDTO<Void> response = roomService.banUser(roomId, 2L);
+
+        assertTrue(response.isSuccess());
+        verify(roomPlayerRepository, never()).delete(any(RoomPlayer.class));
+        verify(roomBanRepository).save(any(RoomBan.class));
+    }
+
+    @Test
+    void banUser_WhenAlreadyBanned_ShouldNotSaveAgain() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomPlayerRepository.findByRoomAndUser(room, target)).thenReturn(Optional.empty());
+        when(roomBanRepository.existsByRoomAndUser(room, target)).thenReturn(true);
+
+        ResponseDTO<Void> response = roomService.banUser(roomId, 2L);
+
+        assertTrue(response.isSuccess());
+        verify(roomBanRepository, never()).save(any(RoomBan.class));
+    }
+
+    @Test
+    void banUser_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User requester = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+        User roomMaster = User.builder().id(99L).name("Outro Mestre").email("master@hunter.com").build();
+
+        Room room = Room.builder().id(roomId).name("Sala do Outro").master(roomMaster).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(requester));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.banUser(roomId, 3L));
+        verify(roomBanRepository, never()).save(any(RoomBan.class));
+    }
+
+    @Test
+    void banUser_TargetIsMaster_ShouldThrowCannotBanMasterException() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(CannotBanMasterException.class, () -> roomService.banUser(roomId, 1L));
+        verify(roomBanRepository, never()).save(any(RoomBan.class));
+    }
+
+    @Test
+    void banUser_TargetUserNotFound_ShouldThrowUserNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> roomService.banUser(roomId, 2L));
+        verify(roomBanRepository, never()).save(any(RoomBan.class));
+    }
+
+    @Test
+    void banUser_RoomNotFound_ShouldThrowRoomNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class, () -> roomService.banUser(roomId, 2L));
+    }
+
+    @Test
+    void unbanUser_AsMaster_ShouldRemoveBan() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+
+        RoomBan ban = RoomBan.builder().room(room).user(target).bannedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomBanRepository.findByRoomAndUser(room, target)).thenReturn(Optional.of(ban));
+
+        ResponseDTO<Void> response = roomService.unbanUser(roomId, 2L);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Banimento removido com sucesso", response.getMessage());
+        verify(roomBanRepository).delete(ban);
+    }
+
+    @Test
+    void unbanUser_WhenNotBanned_ShouldThrowBanNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+
+        User target = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        when(roomBanRepository.findByRoomAndUser(room, target)).thenReturn(Optional.empty());
+
+        assertThrows(BanNotFoundException.class, () -> roomService.unbanUser(roomId, 2L));
+        verify(roomBanRepository, never()).delete(any(RoomBan.class));
+    }
+
+    @Test
+    void unbanUser_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User requester = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+        User roomMaster = User.builder().id(99L).name("Outro Mestre").email("master@hunter.com").build();
+
+        Room room = Room.builder().id(roomId).name("Sala do Outro").master(roomMaster).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(requester));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.unbanUser(roomId, 3L));
+        verify(roomBanRepository, never()).delete(any(RoomBan.class));
+    }
+
+    @Test
+    void listBans_AsMaster_ShouldReturnBannedUsers() {
+        UUID roomId = UUID.randomUUID();
+
+        User banned = User.builder().id(2L).name("Killua Zoldyck").email("killua@hunter.com").build();
+
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+
+        RoomBan ban = RoomBan.builder().room(room).user(banned).bannedAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomBanRepository.findByRoomWithUser(room)).thenReturn(List.of(ban));
+
+        ResponseDTO<List<RoomBanResponseDTO>> response = roomService.listBans(roomId);
+
+        assertTrue(response.isSuccess());
+        assertEquals(1, response.getContent().size());
+        assertEquals(2L, response.getContent().get(0).getId());
+        assertEquals("Killua Zoldyck", response.getContent().get(0).getName());
+    }
+
+    @Test
+    void listBans_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+
+        User requester = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+        User roomMaster = User.builder().id(99L).name("Outro Mestre").email("master@hunter.com").build();
+
+        Room room = Room.builder().id(roomId).name("Sala do Outro").master(roomMaster).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(requester));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.listBans(roomId));
+    }
+
+    @Test
+    void joinRoom_WhenUserBanned_ShouldThrowUserBannedException() {
+        String hash = UUID.randomUUID().toString();
+        UUID roomId = UUID.randomUUID();
+
+        User player = User.builder().id(2L).name("Killua Zoldyck").email("gon@hunter.com").build();
+
+        Room room = Room.builder()
+                .id(roomId)
+                .name("Sala do Gon")
+                .master(masterUser)
+                .currentPlayers(1)
+                .maxPlayers(10)
+                .build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(redisInviteService.getRoomIdByHash(hash)).thenReturn(Optional.of(roomId));
+        when(roomRepository.findByIdWithLock(roomId)).thenReturn(Optional.of(room));
+        when(roomBanRepository.existsByRoomAndUser(room, player)).thenReturn(true);
+
+        assertThrows(UserBannedException.class, () -> roomService.joinRoom(hash));
+        verify(roomPlayerRepository, never()).save(any());
     }
 
     // --- leaveRoom tests ---
