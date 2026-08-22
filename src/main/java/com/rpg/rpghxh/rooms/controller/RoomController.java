@@ -125,6 +125,21 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{id}/invite")
+    @Operation(summary = "Revogar convite da sala", description = "Invalida o link de convite ativo da sala antes do fim das 8 horas. Apenas o Mestre da sala pode revogar. Operacao idempotente.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Convite revogado com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode revogar o convite",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> revokeInvite(@PathVariable UUID id) {
+        ResponseDTO<Void> response = roomService.revokeInvite(id);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/{id}/members/{userId}")
     @Operation(summary = "Remover membro da sala", description = "Remove um jogador da sala e recalcula o numero de jogadores. Apenas o Mestre da sala pode remover. O Mestre nao pode ser removido.")
     @ApiResponses(value = {

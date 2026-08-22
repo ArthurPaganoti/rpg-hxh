@@ -179,6 +179,14 @@ public class RoomService {
         return ResponseDTO.success("Voce saiu da sala com sucesso");
     }
 
+    public ResponseDTO<Void> revokeInvite(UUID roomId) {
+        findRoomAsMaster(roomId);
+
+        redisInviteService.removeInvite(roomId);
+
+        return ResponseDTO.success("Convite revogado com sucesso");
+    }
+
     @Transactional
     public ResponseDTO<Void> removeMember(UUID roomId, Long userId) {
         User master = getAuthenticatedUser();
