@@ -65,6 +65,12 @@ class RoomServiceTest {
     private RoomBanRepository roomBanRepository;
 
     @Mock
+    private com.rpg.rpghxh.entities.room.repository.RoomSheetRepository roomSheetRepository;
+
+    @Mock
+    private com.rpg.rpghxh.shared.storage.FileStorageService fileStorageService;
+
+    @Mock
     private RedisInviteService redisInviteService;
 
     private RoomService roomService;
@@ -74,7 +80,8 @@ class RoomServiceTest {
     @BeforeEach
     void setUp() {
         roomService = new RoomService(roomRepository, userRepository, roomPlayerRepository,
-                roomBanRepository, redisInviteService, "https://api.rpg.com/rooms/join/");
+                roomBanRepository, roomSheetRepository, fileStorageService, redisInviteService,
+                "https://api.rpg.com/rooms/join/");
 
         masterUser = User.builder()
                 .id(1L)
