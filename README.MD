@@ -204,6 +204,22 @@ Gera ou recupera o link de convite da sala. **Apenas o Mestre** da sala pode ace
 
 ---
 
+### `DELETE /rooms/{id}/invite` — Revogar Convite
+
+Invalida o link de convite ativo antes do fim das 8 horas (útil quando o link vaza). **Apenas o Mestre** pode revogar (403 para outros). Operação idempotente; um novo `GET /rooms/{id}/invite` gera um hash diferente.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Convite revogado com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+---
+
 ### `GET /rooms` — Listar Minhas Salas
 
 Lista todas as salas em que o usuário autenticado participa (como Mestre ou jogador), ordenadas da mais recente para a mais antiga. Retorna `content: []` quando o usuário não tem salas.

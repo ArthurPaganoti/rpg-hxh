@@ -124,6 +124,28 @@ Retornado quando o token JWT esta ausente ou invalido.
 
 ---
 
+### `DELETE /rooms/{id}/invite` — Revogar Convite
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode revogar.
+
+Invalida o link de convite ativo antes do fim das 8 horas (util quando o link vaza). Reusa `RedisInviteService.removeInvite`, que apaga tanto a hash da sala quanto o indice reverso (hash -> roomId). **Idempotente**: revogar quando nao ha convite ativo retorna 200 do mesmo jeito. Um novo `GET /rooms/{id}/invite` gera um hash diferente.
+
+#### Respostas
+
+**200 OK — Convite Revogado:**
+
+```json
+{
+  "success": true,
+  "message": "Convite revogado com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+**403 Forbidden — Usuario nao e o Mestre** e **404 Not Found — Sala nao encontrada**: mesmo formato dos demais endpoints (`BUSINESS_ERROR`), validados via `findRoomAsMaster`.
+
+---
+
 ### `GET /rooms` — Listar Minhas Salas
 
 **Autenticacao**: Obrigatoria (Bearer JWT).
@@ -400,6 +422,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Multiplas salas | Um usuario pode ser Mestre de multiplas salas |
 | Invite Link | Link de convite gerado sob demanda via `GET /rooms/{id}/invite` (Redis, TTL 8h) |
 | Master-only Invite | Apenas o Mestre pode gerar/obter o link de convite |
+| Revogar convite | Apenas o Mestre revoga via `DELETE /rooms/{id}/invite`; invalida o link vazado antes das 8h (idempotente); novo GET gera hash diferente |
 | Jogadores iniciais | `current_players` inicia com 1 (o Mestre) |
 | Contagem de jogadores | Apos cada join, `current_players` e recalculado via `COUNT(room_players)` (fonte de verdade e a tabela `room_players`, nao o contador manual) |
 | Limite de jogadores | `max_players` configuravel na criacao (2 a 10); padrao 10 quando omitido |
