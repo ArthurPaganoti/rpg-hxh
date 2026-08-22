@@ -2,6 +2,7 @@ package com.rpg.rpghxh.rooms.controller;
 
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
@@ -169,6 +170,53 @@ public class RoomController {
     })
     public ResponseEntity<ResponseDTO<Void>> removeMember(@PathVariable UUID id, @PathVariable Long userId) {
         ResponseDTO<Void> response = roomService.removeMember(id, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/bans")
+    @Operation(summary = "Listar banidos da sala", description = "Lista os jogadores banidos da sala. Apenas o Mestre da sala pode acessar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Banidos listados com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode listar os banidos",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<List<RoomBanResponseDTO>>> listBans(@PathVariable UUID id) {
+        ResponseDTO<List<RoomBanResponseDTO>> response = roomService.listBans(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/bans/{userId}")
+    @Operation(summary = "Banir jogador da sala", description = "Bane um jogador da sala: remove-o se for membro e impede que reentre, mesmo com um link de convite valido. Apenas o Mestre da sala pode banir. O Mestre nao pode ser banido.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Jogador banido da sala com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode banir jogadores",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada ou usuario nao encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "409", description = "O Mestre nao pode ser banido da sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> banUser(@PathVariable UUID id, @PathVariable Long userId) {
+        ResponseDTO<Void> response = roomService.banUser(id, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}/bans/{userId}")
+    @Operation(summary = "Desbanir jogador da sala", description = "Remove o banimento de um jogador, permitindo que ele volte a entrar via convite. Apenas o Mestre da sala pode desbanir.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Banimento removido com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode desbanir jogadores",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada, usuario nao encontrado ou jogador nao esta banido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> unbanUser(@PathVariable UUID id, @PathVariable Long userId) {
+        ResponseDTO<Void> response = roomService.unbanUser(id, userId);
         return ResponseEntity.ok(response);
     }
 

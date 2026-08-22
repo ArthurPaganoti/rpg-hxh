@@ -1,17 +1,22 @@
 package com.rpg.rpghxh.rooms.service;
 
 import com.rpg.rpghxh.entities.room.entity.Room;
+import com.rpg.rpghxh.entities.room.entity.RoomBan;
 import com.rpg.rpghxh.entities.room.entity.RoomPlayer;
+import com.rpg.rpghxh.entities.room.repository.RoomBanRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomPlayerRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
+import com.rpg.rpghxh.shared.exceptions.BanNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.CannotBanMasterException;
 import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
@@ -22,6 +27,7 @@ import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
 import com.rpg.rpghxh.shared.exceptions.RoomFullException;
 import com.rpg.rpghxh.shared.exceptions.RoomMembershipRequiredException;
 import com.rpg.rpghxh.shared.exceptions.RoomNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.UserBannedException;
 import com.rpg.rpghxh.shared.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -38,17 +44,20 @@ public class RoomService {
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
     private final RoomPlayerRepository roomPlayerRepository;
+    private final RoomBanRepository roomBanRepository;
     private final RedisInviteService redisInviteService;
     private final String inviteBaseUrl;
 
     public RoomService(RoomRepository roomRepository,
                        UserRepository userRepository,
                        RoomPlayerRepository roomPlayerRepository,
+                       RoomBanRepository roomBanRepository,
                        RedisInviteService redisInviteService,
                        @Value("${INVITE_BASE_URL:https://api.rpg.com/rooms/join/}") String inviteBaseUrl) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
         this.roomPlayerRepository = roomPlayerRepository;
+        this.roomBanRepository = roomBanRepository;
         this.redisInviteService = redisInviteService;
         this.inviteBaseUrl = inviteBaseUrl;
     }
@@ -102,6 +111,10 @@ public class RoomService {
             throw new PlayerAlreadyInRoomException();
         }
 
+        if (roomBanRepository.existsByRoomAndUser(room, user)) {
+            throw new UserBannedException();
+        }
+
         if (roomPlayerRepository.existsByRoomAndUser(room, user)) {
             throw new PlayerAlreadyInRoomException();
         }
@@ -151,6 +164,7 @@ public class RoomService {
         Room room = findRoomAsMaster(roomId);
 
         redisInviteService.removeInvite(roomId);
+        roomBanRepository.deleteByRoom(room);
         roomPlayerRepository.deleteByRoom(room);
         roomRepository.delete(room);
 
@@ -214,6 +228,66 @@ public class RoomService {
         roomRepository.save(room);
 
         return ResponseDTO.success("Jogador removido da sala com sucesso");
+    }
+
+    @Transactional
+    public ResponseDTO<Void> banUser(UUID roomId, Long userId) {
+        User master = getAuthenticatedUser();
+
+        Room room = roomRepository.findByIdWithLock(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (!room.getMaster().getId().equals(master.getId())) {
+            throw new RoomAccessDeniedException();
+        }
+
+        if (room.getMaster().getId().equals(userId)) {
+            throw new CannotBanMasterException();
+        }
+
+        User target = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        roomPlayerRepository.findByRoomAndUser(room, target).ifPresent(roomPlayer -> {
+            roomPlayerRepository.delete(roomPlayer);
+            room.setCurrentPlayers((int) roomPlayerRepository.countByRoom(room));
+            roomRepository.save(room);
+        });
+
+        if (!roomBanRepository.existsByRoomAndUser(room, target)) {
+            roomBanRepository.save(RoomBan.builder().room(room).user(target).build());
+        }
+
+        return ResponseDTO.success("Jogador banido da sala com sucesso");
+    }
+
+    @Transactional
+    public ResponseDTO<Void> unbanUser(UUID roomId, Long userId) {
+        Room room = findRoomAsMaster(roomId);
+
+        User target = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        RoomBan ban = roomBanRepository.findByRoomAndUser(room, target)
+                .orElseThrow(BanNotFoundException::new);
+
+        roomBanRepository.delete(ban);
+
+        return ResponseDTO.success("Banimento removido com sucesso");
+    }
+
+    public ResponseDTO<List<RoomBanResponseDTO>> listBans(UUID roomId) {
+        Room room = findRoomAsMaster(roomId);
+
+        List<RoomBanResponseDTO> bans = roomBanRepository.findByRoomWithUser(room).stream()
+                .map(roomBan -> RoomBanResponseDTO.builder()
+                        .id(roomBan.getUser().getId())
+                        .name(roomBan.getUser().getName())
+                        .bannedAt(roomBan.getBannedAt())
+                        .build())
+                .toList();
+
+        return ResponseDTO.success(bans, "Banidos listados com sucesso");
     }
 
     public ResponseDTO<RoomResponseDTO> getRoom(UUID roomId) {
