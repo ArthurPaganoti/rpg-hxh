@@ -15,7 +15,7 @@ Uma API backend open source para RPG de mesa, construída com temática **Hunter
 | **Spring Boot** | 4.0.3 | Framework backend |
 | **PostgreSQL** | 15+ | Banco de dados relacional |
 | **Flyway** | — | Migrações de schema |
-| **Redis** | 7+ | Cache, sessões JWT e rate limiting |
+| **Valkey** | 8+ | Cache, sessões JWT e rate limiting (fork BSD do Redis, protocolo compatível) |
 | **Spring Security** | — | Autenticação e autorização |
 | **JWT (jjwt)** | 0.12.6 | Tokens de autenticação |
 | **Springdoc OpenAPI** | 3.0.2 | Documentação Swagger |
@@ -133,7 +133,7 @@ Header: `Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...`
 
 **Segurança:**
 - Token JWT com expiração de 8 horas
-- Sessão armazenada no Redis com TTL automático
+- Sessão armazenada no Valkey com TTL automático
 - Rate limiting: 5 requisições/minuto por IP
 
 > Documentação completa: [`docs/authentication.md`](docs/authentication.md)
@@ -275,7 +275,7 @@ Campos `null` são omitidos automaticamente do JSON.
 ### Pré-requisitos
 
 - **Java 21**
-- **PostgreSQL 15+** e **Redis 7+** — ou **Docker + Docker Compose** para subir ambos automaticamente
+- **PostgreSQL 15+** e **Valkey 8+** — ou **Docker + Docker Compose** para subir ambos automaticamente
 
 ### 1. Clone o repositório
 
@@ -300,10 +300,11 @@ DB_NAME=rpg_hxh
 DB_USERNAME=postgres
 DB_PASSWORD=sua_senha
 
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DATABASE=0
+# Valkey
+VALKEY_HOST=localhost
+VALKEY_PORT=6379
+VALKEY_DATABASE=0
+VALKEY_PASSWORD=sua_senha_valkey
 
 # JWT
 JWT_SECRET=sua_chave_secreta_longa_e_aleatoria
@@ -314,7 +315,7 @@ INVITE_BASE_URL=http://localhost:8080/rooms/join/
 
 > O carregamento das variáveis é feito automaticamente pelo `DotenvConfig`, que injeta o `.env` como property source do Spring com prioridade máxima.
 
-### 3. Suba a infraestrutura (PostgreSQL + Redis) com Docker
+### 3. Suba a infraestrutura (PostgreSQL + Valkey) com Docker
 
 ```bash
 docker compose up -d
@@ -325,9 +326,9 @@ O `docker-compose.yml` lê as variáveis do `.env` e sobe:
 | Serviço | Imagem | Porta |
 |---------|--------|-------|
 | PostgreSQL | `postgres:15-alpine` | `${DB_PORT}` (padrão 5432) |
-| Redis | `redis:7-alpine` (AOF habilitado) | `${REDIS_PORT}` (padrão 6379) |
+| Valkey | `valkey/valkey:8-alpine` (AOF + requirepass) | `${VALKEY_PORT}` (padrão 6379) |
 
-Ambos possuem healthcheck e volumes persistentes. Se preferir instalações locais de PostgreSQL e Redis, pule este passo.
+Ambos possuem healthcheck e volumes persistentes. Se preferir instalações locais de PostgreSQL e Valkey, pule este passo.
 
 ### 4. Execute a aplicação
 

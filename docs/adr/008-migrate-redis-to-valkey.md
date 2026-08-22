@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-08-01) — decisão registrada; implementação (docker-compose, .env, docs) pendente.
+Aceito e implementado (2026-08-22) — docker-compose, .env/.env.example, application.yaml e docs migrados; código Java e build.gradle intactos; suíte de testes verde.
 
 ## Contexto
 

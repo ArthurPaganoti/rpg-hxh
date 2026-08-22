@@ -6,7 +6,7 @@ Este documento descreve a infraestrutura e a configuracao de ambiente necessaria
 
 - **Java 21** (via SDKMAN, Homebrew ou instalacao manual)
 - **PostgreSQL 15+** em execucao e acessivel
-- **Redis 7+** em execucao e acessivel
+- **Valkey 8+** em execucao e acessivel (fork BSD do Redis, protocolo compativel)
 - **Gradle 8+** (ou use o wrapper incluso `./gradlew`)
 
 ## Variaveis de Ambiente
@@ -28,9 +28,10 @@ cp .env.example .env
 | `DB_NAME` | Nome do banco de dados | `rpg_hxh` |
 | `DB_USERNAME` | Usuario do banco | `postgres` |
 | `DB_PASSWORD` | Senha do banco | `secret` |
-| `REDIS_HOST` | Host do Redis | `localhost` |
-| `REDIS_PORT` | Porta do Redis | `6379` |
-| `REDIS_DATABASE` | Indice do banco Redis | `0` |
+| `VALKEY_HOST` | Host do Valkey | `localhost` |
+| `VALKEY_PORT` | Porta do Valkey | `6379` |
+| `VALKEY_DATABASE` | Indice do banco Valkey | `0` |
+| `VALKEY_PASSWORD` | Senha do Valkey (requirepass) | — |
 | `JWT_SECRET` | Chave secreta para assinatura JWT (HMAC) | Uma string longa e aleatoria |
 
 ### Configuracao JWT
@@ -71,20 +72,20 @@ O Flyway esta configurado para executar na inicializacao com `baseline-on-migrat
 
 > **Regra**: Nunca dependa de `ddl-auto` para alteracoes de schema em producao. Todo DDL deve ser feito por arquivos de migracao Flyway.
 
-## Redis
+## Valkey
 
-O Redis e utilizado para dois propositos:
+O Valkey (fork BSD do Redis, drop-in) e utilizado para dois propositos:
 
 1. **Rate Limiting** — O `RateLimitFilter` rastreia a contagem de requisicoes por IP usando chaves Redis com TTL. Limita `POST /register` e `POST /login` a 5 requisicoes/minuto por IP.
-2. **Cache** — O Spring Cache esta configurado com `spring.cache.type=redis`.
+2. **Cache** — O Spring Cache esta configurado com `spring.cache.type=redis` (namespace do Spring Data Redis; o servidor e o Valkey).
 
 ```yaml
 spring:
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      database: ${REDIS_DATABASE}
+      host: ${VALKEY_HOST}
+      port: ${VALKEY_PORT}
+      database: ${VALKEY_DATABASE}
 ```
 
 ## Executando a Aplicacao
@@ -110,7 +111,7 @@ A aplicacao inicia na porta padrao do Spring Boot (`8080`). A documentacao da AP
 
 ## Testes
 
-Os testes utilizam um banco de dados **H2** em memoria e nao exigem que PostgreSQL ou Redis estejam em execucao. O Flyway e desabilitado no perfil de testes. A dependencia do H2 esta inclusa como `testRuntimeOnly` no `build.gradle`.
+Os testes utilizam um banco de dados **H2** em memoria e nao exigem que PostgreSQL ou Valkey estejam em execucao. O Flyway e desabilitado no perfil de testes. A dependencia do H2 esta inclusa como `testRuntimeOnly` no `build.gradle`.
 
 ## Observabilidade (Planejado)
 
