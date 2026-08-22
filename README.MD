@@ -262,6 +262,22 @@ Remove o jogador autenticado da sala e recalcula o número de jogadores. **Qualq
 
 ---
 
+### `DELETE /rooms/{id}/members/{userId}` — Remover Membro
+
+Remove um jogador da sala e recalcula o número de jogadores. **Apenas o Mestre** pode remover (403 para outros). O Mestre não pode ser removido (409). O alvo precisa ser membro da sala (404).
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Jogador removido da sala com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+---
+
 ### Formato Padrão de Resposta (`ResponseDTO<T>`)
 
 Todos os endpoints seguem o mesmo formato:

@@ -274,6 +274,38 @@ Remove o jogador autenticado da sala na mesma transacao (com lock pessimista na 
 
 ---
 
+### `DELETE /rooms/{id}/members/{userId}` — Remover Membro
+
+**Autenticacao**: Obrigatoria (Bearer JWT). **Apenas o Mestre** da sala pode remover jogadores.
+
+Remove o jogador alvo da sala na mesma transacao (com lock pessimista na sala):
+1. Carrega a sala com `findByIdWithLock` (404 se nao existir)
+2. Autenticado nao e o Mestre -> 403
+3. Alvo e o proprio Mestre -> 409 (o Mestre nao pode ser removido; deve deletar a sala)
+4. Busca o usuario alvo (`userRepository.findById`) -> 404 se nao existir
+5. Localiza o `RoomPlayer` do alvo (`findByRoomAndUser`) -> 404 se nao for membro
+6. Remove o `RoomPlayer` e recalcula `currentPlayers = countByRoom`
+
+#### Respostas
+
+**200 OK — Jogador Removido:**
+
+```json
+{
+  "success": true,
+  "message": "Jogador removido da sala com sucesso",
+  "timestamp": "2026-08-22T15:00:00Z"
+}
+```
+
+| Codigo | Situacao | Mensagem |
+|--------|----------|----------|
+| 403 | Nao e o Mestre da sala | Acesso negado: apenas o Mestre da sala |
+| 404 | Sala inexistente / usuario inexistente / alvo nao e membro | Sala nao encontrada / Usuario nao encontrado / Jogador nao esta na sala |
+| 409 | Tentativa de remover o Mestre | O Mestre nao pode ser removido da sala |
+
+---
+
 ## Arquitetura
 
 A feature segue o padrao de **Functional Slice**:
@@ -378,6 +410,7 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Membros da sala | Qualquer membro ve a lista de membros (`findRoomAsMember`); nao-membros recebem 403 |
 | Delete de sala | Apenas o Mestre deleta (`findRoomAsMaster`); remove convite Redis, `room_players` e a sala na mesma transacao |
 | Sair da sala | Qualquer membro sai via `POST /rooms/{id}/leave`; remove o `RoomPlayer` e recalcula `current_players`; o Mestre nao pode sair (409), deve deletar a sala |
+| Remover membro | Apenas o Mestre remove via `DELETE /rooms/{id}/members/{userId}`; recalcula `current_players`; o Mestre nao pode ser removido (409); alvo precisa ser membro (404) |
 | Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
 | Convite invalido | Retorna 404 se o hash nao existe ou expirou |
 
