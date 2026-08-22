@@ -8,10 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface RoomPlayerRepository extends JpaRepository<RoomPlayer, Long> {
 
     boolean existsByRoomAndUser(Room room, User user);
+
+    Optional<RoomPlayer> findByRoomAndUser(Room room, User user);
 
     long countByRoom(Room room);
 

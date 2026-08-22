@@ -125,6 +125,23 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{id}/leave")
+    @Operation(summary = "Sair da sala", description = "Remove o jogador autenticado da sala e recalcula o numero de jogadores. O Mestre nao pode sair; deve deletar a sala.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Voce saiu da sala com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas membros da sala podem sair",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "409", description = "O Mestre nao pode sair da sala",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> leaveRoom(@PathVariable UUID id) {
+        ResponseDTO<Void> response = roomService.leaveRoom(id);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/join/{hash}")
     @Operation(summary = "Entrar em uma sala via convite", description = "Adiciona o jogador autenticado a uma sala usando o hash do link de convite.")
     @ApiResponses(value = {

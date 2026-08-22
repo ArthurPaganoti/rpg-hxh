@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
     }
 
-    @ExceptionHandler({RoomFullException.class, PlayerAlreadyInRoomException.class, MaxPlayersBelowCurrentException.class})
+    @ExceptionHandler({RoomFullException.class, PlayerAlreadyInRoomException.class, MaxPlayersBelowCurrentException.class, MasterCannotLeaveRoomException.class})
     public ResponseEntity<ResponseDTO<Object>> handleConflictExceptions(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)

@@ -13,6 +13,7 @@ import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
+import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.MaxPlayersBelowCurrentException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.RoomAccessDeniedException;
@@ -152,6 +153,28 @@ public class RoomService {
         roomRepository.delete(room);
 
         return ResponseDTO.success("Sala deletada com sucesso");
+    }
+
+    @Transactional
+    public ResponseDTO<Void> leaveRoom(UUID roomId) {
+        User user = getAuthenticatedUser();
+
+        Room room = roomRepository.findByIdWithLock(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        if (room.getMaster().getId().equals(user.getId())) {
+            throw new MasterCannotLeaveRoomException();
+        }
+
+        RoomPlayer roomPlayer = roomPlayerRepository.findByRoomAndUser(room, user)
+                .orElseThrow(RoomMembershipRequiredException::new);
+
+        roomPlayerRepository.delete(roomPlayer);
+
+        room.setCurrentPlayers((int) roomPlayerRepository.countByRoom(room));
+        roomRepository.save(room);
+
+        return ResponseDTO.success("Voce saiu da sala com sucesso");
     }
 
     public ResponseDTO<List<RoomMemberResponseDTO>> listRoomMembers(UUID roomId) {
