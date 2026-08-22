@@ -48,3 +48,11 @@ graphify-out/cache/
 
 ### Spec Kit (my-project) ###
 my-project/
+
+# Caveman IDE rule files (per-agent, local)
+.cursor/
+.windsurf/
+.clinerules/
+.opencode/
+.github/copilot-instructions.md
+AGENTS.md
