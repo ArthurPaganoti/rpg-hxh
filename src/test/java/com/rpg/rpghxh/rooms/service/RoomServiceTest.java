@@ -11,6 +11,7 @@ import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomCoverDownload;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
@@ -18,6 +19,8 @@ import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.BanNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.CannotBanMasterException;
 import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
+import com.rpg.rpghxh.shared.exceptions.CoverNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.InvalidImageTypeException;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.PlayerNotInRoomException;
@@ -46,6 +49,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -1257,6 +1262,138 @@ class RoomServiceTest {
 
         assertThrows(UserBannedException.class, () -> roomService.joinRoom(hash));
         verify(roomPlayerRepository, never()).save(any());
+    }
+
+    // --- cover tests ---
+
+    @Test
+    void uploadCover_AsMaster_ShouldStoreAndSetKey() {
+        UUID roomId = UUID.randomUUID();
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+        org.springframework.mock.web.MockMultipartFile img =
+                new org.springframework.mock.web.MockMultipartFile("file", "capa.png", "image/png", "img".getBytes());
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomRepository.save(room)).thenReturn(room);
+
+        ResponseDTO<Void> response = roomService.uploadCover(roomId, img);
+
+        assertTrue(response.isSuccess());
+        assertEquals("rooms/" + roomId + "/cover", room.getCoverObjectKey());
+        verify(fileStorageService).upload(eq("rooms/" + roomId + "/cover"), any(), anyLong(), eq("image/png"));
+    }
+
+    @Test
+    void uploadCover_InvalidType_ShouldThrowInvalidImageTypeException() {
+        UUID roomId = UUID.randomUUID();
+        Room room = Room.builder().id(roomId).name("Sala do Gon").master(masterUser).build();
+        org.springframework.mock.web.MockMultipartFile pdf =
+                new org.springframework.mock.web.MockMultipartFile("file", "x.pdf", "application/pdf", "x".getBytes());
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(InvalidImageTypeException.class, () -> roomService.uploadCover(roomId, pdf));
+        verify(fileStorageService, never()).upload(anyString(), any(), anyLong(), anyString());
+    }
+
+    @Test
+    void uploadCover_AsNonMaster_ShouldThrowRoomAccessDeniedException() {
+        UUID roomId = UUID.randomUUID();
+        User other = User.builder().id(2L).name("Killua").email("gon@hunter.com").build();
+        User roomMaster = User.builder().id(99L).name("Outro").email("m@h.com").build();
+        Room room = Room.builder().id(roomId).name("Sala").master(roomMaster).build();
+        org.springframework.mock.web.MockMultipartFile img =
+                new org.springframework.mock.web.MockMultipartFile("file", "c.png", "image/png", "i".getBytes());
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(other));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(RoomAccessDeniedException.class, () -> roomService.uploadCover(roomId, img));
+    }
+
+    @Test
+    void getCover_AsMember_ShouldReturnStream() {
+        UUID roomId = UUID.randomUUID();
+        User player = User.builder().id(2L).name("Killua").email("gon@hunter.com").build();
+        Room room = Room.builder().id(roomId).name("Sala").master(masterUser)
+                .coverObjectKey("rooms/x/cover").build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(player));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, player)).thenReturn(true);
+        when(fileStorageService.stat("rooms/x/cover"))
+                .thenReturn(new com.rpg.rpghxh.shared.storage.FileStorageService.ObjectStat("image/png", 3));
+        when(fileStorageService.download("rooms/x/cover"))
+                .thenReturn(new java.io.ByteArrayInputStream("img".getBytes()));
+
+        RoomCoverDownload cover = roomService.getCover(roomId);
+
+        assertEquals("image/png", cover.contentType());
+        assertEquals(3, cover.sizeBytes());
+    }
+
+    @Test
+    void getCover_NoCover_ShouldThrowCoverNotFoundException() {
+        UUID roomId = UUID.randomUUID();
+        Room room = Room.builder().id(roomId).name("Sala").master(masterUser).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThrows(CoverNotFoundException.class, () -> roomService.getCover(roomId));
+    }
+
+    @Test
+    void getCover_AsNonMember_ShouldThrowRoomMembershipRequiredException() {
+        UUID roomId = UUID.randomUUID();
+        User outsider = User.builder().id(3L).name("Hisoka").email("gon@hunter.com").build();
+        Room room = Room.builder().id(roomId).name("Sala").master(masterUser)
+                .coverObjectKey("rooms/x/cover").build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(outsider));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomPlayerRepository.existsByRoomAndUser(room, outsider)).thenReturn(false);
+
+        assertThrows(RoomMembershipRequiredException.class, () -> roomService.getCover(roomId));
+    }
+
+    @Test
+    void deleteCover_AsMaster_ShouldRemoveObjectAndClearKey() {
+        UUID roomId = UUID.randomUUID();
+        Room room = Room.builder().id(roomId).name("Sala").master(masterUser)
+                .coverObjectKey("rooms/x/cover").build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(roomRepository.save(room)).thenReturn(room);
+
+        ResponseDTO<Void> response = roomService.deleteCover(roomId);
+
+        assertTrue(response.isSuccess());
+        assertNull(room.getCoverObjectKey());
+        verify(fileStorageService).delete("rooms/x/cover");
+    }
+
+    @Test
+    void createRoom_WithDescription_ShouldPersistIt() {
+        CreateRoomDTO dto = CreateRoomDTO.builder().name("Sala").description("Campanha teste").build();
+        UUID roomId = UUID.randomUUID();
+        Room saved = Room.builder().id(roomId).name("Sala").description("Campanha teste")
+                .master(masterUser).currentPlayers(1).maxPlayers(10).createdAt(LocalDateTime.now()).build();
+
+        when(userRepository.findByEmail("gon@hunter.com")).thenReturn(Optional.of(masterUser));
+        when(roomRepository.save(any(Room.class))).thenReturn(saved);
+        when(roomPlayerRepository.save(any(RoomPlayer.class))).thenReturn(RoomPlayer.builder().build());
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(saved));
+
+        ResponseDTO<RoomResponseDTO> response = roomService.createRoom(dto);
+
+        assertEquals("Campanha teste", response.getContent().getDescription());
+        ArgumentCaptor<Room> captor = ArgumentCaptor.forClass(Room.class);
+        verify(roomRepository).save(captor.capture());
+        assertEquals("Campanha teste", captor.getValue().getDescription());
     }
 
     // --- leaveRoom tests ---

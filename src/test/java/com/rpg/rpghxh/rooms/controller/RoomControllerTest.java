@@ -5,6 +5,7 @@ import com.rpg.rpghxh.login.filter.JwtAuthenticationFilter;
 import com.rpg.rpghxh.login.filter.RateLimitFilter;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomCoverDownload;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.service.RoomService;
@@ -14,6 +15,8 @@ import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.BanNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.CannotBanMasterException;
 import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
+import com.rpg.rpghxh.shared.exceptions.CoverNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.InvalidImageTypeException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
 import com.rpg.rpghxh.shared.exceptions.PlayerAlreadyInRoomException;
 import com.rpg.rpghxh.shared.exceptions.PlayerNotInRoomException;
@@ -29,6 +32,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.SecurityFilterChain;
@@ -45,6 +49,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -390,6 +395,32 @@ class RoomControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Sala atualizada com sucesso"))
                 .andExpect(jsonPath("$.content.name").value("Sala Renovada"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldUpdateRoomWithDescriptionAndMaxPlayers() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        RoomResponseDTO roomResponse = RoomResponseDTO.builder()
+                .id(roomId)
+                .name("Sala Renovada")
+                .description("Campanha nova")
+                .masterName("Gon Freecss")
+                .currentPlayers(1)
+                .maxPlayers(5)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(roomService.updateRoom(eq(roomId), any()))
+                .thenReturn(ResponseDTO.success(roomResponse, "Sala atualizada com sucesso"));
+
+        mockMvc.perform(patch("/rooms/" + roomId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Sala Renovada\", \"description\": \"Campanha nova\", \"maxPlayers\": 5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.content.description").value("Campanha nova"));
     }
 
     @Test
@@ -837,6 +868,90 @@ class RoomControllerTest {
         UUID roomId = UUID.randomUUID();
 
         mockMvc.perform(get("/rooms/" + roomId + "/bans"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterUploadsCover() throws Exception {
+        UUID roomId = UUID.randomUUID();
+        MockMultipartFile img = new MockMultipartFile("file", "capa.png", "image/png", "img".getBytes());
+
+        when(roomService.uploadCover(eq(roomId), any()))
+                .thenReturn(ResponseDTO.success("Imagem da sala atualizada com sucesso"));
+
+        mockMvc.perform(multipart("/rooms/" + roomId + "/cover").file(img))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturn403WhenNonMasterUploadsCover() throws Exception {
+        UUID roomId = UUID.randomUUID();
+        MockMultipartFile img = new MockMultipartFile("file", "capa.png", "image/png", "img".getBytes());
+
+        when(roomService.uploadCover(eq(roomId), any())).thenThrow(new RoomAccessDeniedException());
+
+        mockMvc.perform(multipart("/rooms/" + roomId + "/cover").file(img))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn415WhenCoverTypeInvalid() throws Exception {
+        UUID roomId = UUID.randomUUID();
+        MockMultipartFile pdf = new MockMultipartFile("file", "x.pdf", "application/pdf", "x".getBytes());
+
+        when(roomService.uploadCover(eq(roomId), any())).thenThrow(new InvalidImageTypeException());
+
+        mockMvc.perform(multipart("/rooms/" + roomId + "/cover").file(pdf))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    @WithMockUser(username = "killua@hunter.com")
+    void shouldReturnImageWhenMemberGetsCover() throws Exception {
+        UUID roomId = UUID.randomUUID();
+        RoomCoverDownload cover = new RoomCoverDownload(
+                new java.io.ByteArrayInputStream("img".getBytes()), "image/png", 3);
+
+        when(roomService.getCover(roomId)).thenReturn(cover);
+
+        mockMvc.perform(get("/rooms/" + roomId + "/cover"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "image/png"));
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn404WhenRoomHasNoCover() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.getCover(roomId)).thenThrow(new CoverNotFoundException());
+
+        mockMvc.perform(get("/rooms/" + roomId + "/cover"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = "gon@hunter.com")
+    void shouldReturn200WhenMasterDeletesCover() throws Exception {
+        UUID roomId = UUID.randomUUID();
+
+        when(roomService.deleteCover(roomId)).thenReturn(ResponseDTO.success("Imagem da sala removida com sucesso"));
+
+        mockMvc.perform(delete("/rooms/" + roomId + "/cover"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void shouldDenyUploadCoverWhenNotAuthenticated() throws Exception {
+        UUID roomId = UUID.randomUUID();
+        MockMultipartFile img = new MockMultipartFile("file", "capa.png", "image/png", "img".getBytes());
+
+        mockMvc.perform(multipart("/rooms/" + roomId + "/cover").file(img))
                 .andExpect(status().isForbidden());
     }
 
