@@ -1,0 +1,2 @@
+ALTER TABLE rooms ADD COLUMN description VARCHAR(500);
+ALTER TABLE rooms ADD COLUMN cover_object_key VARCHAR(512);

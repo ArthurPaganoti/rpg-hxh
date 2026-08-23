@@ -22,6 +22,10 @@ public class CreateRoomDTO {
     @Schema(description = "Nome da sala", example = "Sala do Gon")
     private String name;
 
+    @Size(max = 500, message = "A descricao deve ter no maximo 500 caracteres")
+    @Schema(description = "Descricao da sala (opcional)", example = "Campanha de Hunters iniciantes rumo ao exame.")
+    private String description;
+
     @Min(value = 2, message = "A sala deve permitir no minimo 2 jogadores")
     @Max(value = 10, message = "A sala deve permitir no maximo 10 jogadores")
     @Schema(description = "Numero maximo de jogadores (opcional, padrao 10)", example = "10")

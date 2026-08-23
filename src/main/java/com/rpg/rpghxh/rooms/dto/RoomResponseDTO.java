@@ -17,10 +17,14 @@ public class RoomResponseDTO {
 
     private UUID id;
     private String name;
+    private String description;
     private String masterName;
     private int currentPlayers;
     private int maxPlayers;
     private LocalDateTime createdAt;
+
+    @JsonProperty("hasCover")
+    private boolean cover;
 
     @JsonProperty("isMaster")
     private boolean master;

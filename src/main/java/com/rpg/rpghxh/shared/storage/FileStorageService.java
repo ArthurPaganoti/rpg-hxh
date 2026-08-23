@@ -5,6 +5,8 @@ import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.StatObjectResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +47,18 @@ public class FileStorageService {
         }
     }
 
+    public ObjectStat stat(String objectKey) {
+        try {
+            StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(objectKey)
+                    .build());
+            return new ObjectStat(stat.contentType(), stat.size());
+        } catch (Exception ex) {
+            throw new FileStorageException("Falha ao obter metadados do arquivo no storage", ex);
+        }
+    }
+
     public void delete(String objectKey) {
         try {
             minioClient.removeObject(RemoveObjectArgs.builder()
@@ -54,5 +68,8 @@ public class FileStorageService {
         } catch (Exception ex) {
             throw new FileStorageException("Falha ao remover arquivo do storage", ex);
         }
+    }
+
+    public record ObjectStat(String contentType, long size) {
     }
 }

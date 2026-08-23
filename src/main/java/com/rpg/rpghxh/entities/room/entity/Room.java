@@ -23,6 +23,12 @@ public class Room {
     @Column(nullable = false)
     private String name;
 
+    @Column(length = 500)
+    private String description;
+
+    @Column(name = "cover_object_key", length = 512)
+    private String coverObjectKey;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "master_id", nullable = false)
     private User master;

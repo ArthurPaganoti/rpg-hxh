@@ -3,6 +3,7 @@ package com.rpg.rpghxh.rooms.controller;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomCoverDownload;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
@@ -15,9 +16,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -171,6 +175,53 @@ public class RoomController {
     public ResponseEntity<ResponseDTO<Void>> removeMember(@PathVariable UUID id, @PathVariable Long userId) {
         ResponseDTO<Void> response = roomService.removeMember(id, userId);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Enviar/atualizar imagem da sala", description = "Define a imagem de capa da sala (PNG, JPG ou WEBP). Apenas o Mestre da sala pode enviar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Imagem da sala atualizada com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode enviar a imagem",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "415", description = "Tipo de imagem nao permitido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> uploadCover(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(roomService.uploadCover(id, file));
+    }
+
+    @GetMapping("/{id}/cover")
+    @Operation(summary = "Baixar imagem da sala", description = "Retorna a imagem de capa da sala. Qualquer membro da sala pode acessar.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Imagem da sala"),
+        @ApiResponse(responseCode = "403", description = "Apenas membros da sala podem acessar",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala ou imagem nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<InputStreamResource> getCover(@PathVariable UUID id) {
+        RoomCoverDownload cover = roomService.getCover(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(cover.contentType()))
+                .contentLength(cover.sizeBytes())
+                .body(new InputStreamResource(cover.stream()));
+    }
+
+    @DeleteMapping("/{id}/cover")
+    @Operation(summary = "Remover imagem da sala", description = "Remove a imagem de capa da sala. Apenas o Mestre da sala pode remover. Idempotente.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Imagem da sala removida com sucesso",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "403", description = "Apenas o Mestre da sala pode remover a imagem",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Sala nao encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResponseDTO.class)))
+    })
+    public ResponseEntity<ResponseDTO<Void>> deleteCover(@PathVariable UUID id) {
+        return ResponseEntity.ok(roomService.deleteCover(id));
     }
 
     @GetMapping("/{id}/bans")

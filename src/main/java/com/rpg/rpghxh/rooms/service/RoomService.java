@@ -7,18 +7,25 @@ import com.rpg.rpghxh.entities.room.repository.RoomBanRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomPlayerRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomRepository;
 import com.rpg.rpghxh.entities.room.repository.RoomSheetRepository;
+import com.rpg.rpghxh.shared.exceptions.FileStorageException;
 import com.rpg.rpghxh.shared.storage.FileStorageService;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Set;
 import com.rpg.rpghxh.entities.user.entity.User;
 import com.rpg.rpghxh.entities.user.repository.UserRepository;
 import com.rpg.rpghxh.rooms.dto.CreateRoomDTO;
 import com.rpg.rpghxh.rooms.dto.InviteResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomBanResponseDTO;
+import com.rpg.rpghxh.rooms.dto.RoomCoverDownload;
 import com.rpg.rpghxh.rooms.dto.RoomMemberResponseDTO;
 import com.rpg.rpghxh.rooms.dto.RoomResponseDTO;
 import com.rpg.rpghxh.rooms.dto.UpdateRoomDTO;
 import com.rpg.rpghxh.shared.dto.ResponseDTO;
 import com.rpg.rpghxh.shared.exceptions.BanNotFoundException;
 import com.rpg.rpghxh.shared.exceptions.CannotBanMasterException;
+import com.rpg.rpghxh.shared.exceptions.CoverNotFoundException;
+import com.rpg.rpghxh.shared.exceptions.InvalidImageTypeException;
 import com.rpg.rpghxh.shared.exceptions.CannotRemoveMasterException;
 import com.rpg.rpghxh.shared.exceptions.InvalidInviteException;
 import com.rpg.rpghxh.shared.exceptions.MasterCannotLeaveRoomException;
@@ -42,6 +49,8 @@ import java.util.UUID;
 
 @Service
 public class RoomService {
+
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/png", "image/jpeg", "image/webp");
 
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
@@ -76,6 +85,7 @@ public class RoomService {
 
         Room.RoomBuilder roomBuilder = Room.builder()
                 .name(dto.getName())
+                .description(dto.getDescription())
                 .master(master);
 
         if (dto.getMaxPlayers() != null) {
@@ -154,6 +164,7 @@ public class RoomService {
         Room room = findRoomAsMaster(roomId);
 
         room.setName(dto.getName());
+        room.setDescription(dto.getDescription());
 
         if (dto.getMaxPlayers() != null) {
             if (dto.getMaxPlayers() < room.getCurrentPlayers()) {
@@ -172,6 +183,9 @@ public class RoomService {
         Room room = findRoomAsMaster(roomId);
 
         redisInviteService.removeInvite(roomId);
+        if (room.getCoverObjectKey() != null) {
+            fileStorageService.delete(room.getCoverObjectKey());
+        }
         roomSheetRepository.findByRoomWithUser(room)
                 .forEach(sheet -> fileStorageService.delete(sheet.getObjectKey()));
         roomSheetRepository.deleteByRoom(room);
@@ -314,6 +328,62 @@ public class RoomService {
         return ResponseDTO.success(buildRoomResponse(room, user), "Sala encontrada com sucesso");
     }
 
+    @Transactional
+    public ResponseDTO<Void> uploadCover(UUID roomId, MultipartFile file) {
+        Room room = findRoomAsMaster(roomId);
+
+        if (file == null || file.isEmpty() || !ALLOWED_IMAGE_TYPES.contains(file.getContentType())) {
+            throw new InvalidImageTypeException();
+        }
+
+        String objectKey = "rooms/" + roomId + "/cover";
+
+        try {
+            fileStorageService.upload(objectKey, file.getInputStream(), file.getSize(), file.getContentType());
+        } catch (java.io.IOException ex) {
+            throw new FileStorageException("Falha ao ler a imagem enviada", ex);
+        }
+
+        room.setCoverObjectKey(objectKey);
+        roomRepository.save(room);
+
+        return ResponseDTO.success("Imagem da sala atualizada com sucesso");
+    }
+
+    public RoomCoverDownload getCover(UUID roomId) {
+        User user = getAuthenticatedUser();
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(RoomNotFoundException::new);
+
+        boolean isMaster = room.getMaster().getId().equals(user.getId());
+        if (!isMaster && !roomPlayerRepository.existsByRoomAndUser(room, user)) {
+            throw new RoomMembershipRequiredException();
+        }
+
+        if (room.getCoverObjectKey() == null) {
+            throw new CoverNotFoundException();
+        }
+
+        FileStorageService.ObjectStat stat = fileStorageService.stat(room.getCoverObjectKey());
+        return new RoomCoverDownload(
+                fileStorageService.download(room.getCoverObjectKey()),
+                stat.contentType(),
+                stat.size());
+    }
+
+    @Transactional
+    public ResponseDTO<Void> deleteCover(UUID roomId) {
+        Room room = findRoomAsMaster(roomId);
+
+        if (room.getCoverObjectKey() != null) {
+            fileStorageService.delete(room.getCoverObjectKey());
+            room.setCoverObjectKey(null);
+            roomRepository.save(room);
+        }
+
+        return ResponseDTO.success("Imagem da sala removida com sucesso");
+    }
+
     public ResponseDTO<List<RoomMemberResponseDTO>> listRoomMembers(UUID roomId) {
         Room room = findRoomAsMember(roomId);
 
@@ -370,10 +440,12 @@ public class RoomService {
         return RoomResponseDTO.builder()
                 .id(room.getId())
                 .name(room.getName())
+                .description(room.getDescription())
                 .masterName(room.getMaster().getName())
                 .currentPlayers(room.getCurrentPlayers())
                 .maxPlayers(room.getMaxPlayers())
                 .createdAt(room.getCreatedAt())
+                .cover(room.getCoverObjectKey() != null)
                 .master(room.getMaster().getId().equals(requester.getId()))
                 .build();
     }

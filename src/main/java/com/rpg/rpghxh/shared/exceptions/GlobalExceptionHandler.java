@@ -46,8 +46,8 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("BUSINESS_ERROR", "Endpoint nao encontrado"));
     }
 
-    @ExceptionHandler(InvalidFileTypeException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleInvalidFileTypeException(InvalidFileTypeException ex) {
+    @ExceptionHandler({InvalidFileTypeException.class, InvalidImageTypeException.class})
+    public ResponseEntity<ResponseDTO<Object>> handleInvalidFileTypeException(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .body(ResponseDTO.error("BUSINESS_ERROR", ex.getMessage()));
@@ -68,7 +68,7 @@ public class GlobalExceptionHandler {
                 .body(ResponseDTO.error("INTERNAL_ERROR", "Erro ao processar o arquivo"));
     }
 
-    @ExceptionHandler({InvalidInviteException.class, PlayerNotInRoomException.class, BanNotFoundException.class, SheetNotFoundException.class})
+    @ExceptionHandler({InvalidInviteException.class, PlayerNotInRoomException.class, BanNotFoundException.class, SheetNotFoundException.class, CoverNotFoundException.class})
     public ResponseEntity<ResponseDTO<Object>> handleInvalidInviteException(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
