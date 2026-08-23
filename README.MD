@@ -173,6 +173,7 @@ Cria uma nova sala de RPG. O usuário autenticado se torna o Mestre da sala. Req
 
 **Regras:**
 - `name` — Obrigatório, entre 3 e 100 caracteres
+- `description` — Opcional, até 500 caracteres
 - `maxPlayers` — Opcional, entre 2 e 10 (padrão 10)
 - O usuário autenticado se torna o Mestre (`master_id`)
 - `currentPlayers` inicia com 1 (o Mestre)
@@ -229,7 +230,13 @@ Lista todas as salas em que o usuário autenticado participa (como Mestre ou jog
 
 ### `GET /rooms/{id}` — Detalhes da Sala
 
-Retorna os dados de uma sala específica (nome, mestre, jogadores, `isMaster`). **Qualquer membro** da sala pode acessar; não-membros recebem 403. Permite abrir a tela da sala direto por URL, sem depender da listagem.
+Retorna os dados de uma sala específica (nome, `description`, mestre, jogadores, `hasCover`, `isMaster`). **Qualquer membro** da sala pode acessar; não-membros recebem 403. Permite abrir a tela da sala direto por URL, sem depender da listagem.
+
+---
+
+### `POST /rooms/{id}/cover` · `GET /rooms/{id}/cover` · `DELETE /rooms/{id}/cover` — Imagem da Sala
+
+Imagem de capa exibida na home. O **Mestre** envia (`POST`, `multipart`, PNG/JPG/WEBP → MinIO) e remove (`DELETE`); **qualquer membro** baixa (`GET`, stream pelo backend, MinIO privado). `hasCover` no `RoomResponseDTO` indica se há imagem. Tipo inválido → 415.
 
 ---
 

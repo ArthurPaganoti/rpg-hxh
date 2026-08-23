@@ -395,6 +395,26 @@ Bane um jogador: remove-o da sala se for membro (recalcula `current_players`) e 
 
 ---
 
+### Descricao da sala
+
+`description` (opcional, ate 500 caracteres) faz parte de `CreateRoomDTO`/`UpdateRoomDTO` e volta em `RoomResponseDTO`. Exibida na home (`GET /rooms`) e nos detalhes. **Atencao:** em `UpdateRoomDTO`, `@Min/@Max` pertencem ao `maxPlayers` — nao devem ficar sobre o `description` (bug ja corrigido; ha teste de regressao no controller).
+
+### `POST /rooms/{id}/cover` — Enviar/atualizar imagem da sala
+
+`multipart/form-data` com o campo `file`. **Apenas o Mestre.** Aceita PNG/JPG/WEBP; grava no MinIO na chave `rooms/{roomId}/cover` (sobrescreve) e seta `cover_object_key`. Tipo invalido -> **415** `InvalidImageTypeException`.
+
+### `GET /rooms/{id}/cover` — Baixar imagem da sala
+
+Retorna a imagem (stream do MinIO). **Qualquer membro** acessa; nao-membro **403**; sala sem capa **404** `CoverNotFoundException`. O front busca como blob (Authorization Bearer) e usa object URL em `<img>` — o MinIO fica privado.
+
+### `DELETE /rooms/{id}/cover` — Remover imagem da sala
+
+**Apenas o Mestre.** Remove o objeto no MinIO e limpa `cover_object_key`. Idempotente.
+
+`RoomResponseDTO.hasCover` indica se a sala tem imagem. `deleteRoom` remove o objeto de capa junto com sheets/players/bans/convite.
+
+---
+
 ## Arquitetura
 
 A feature segue o padrao de **Functional Slice**:
@@ -504,7 +524,9 @@ Se expirou ou nao existe, gera um novo hash e salva com TTL renovado.
 | Remover membro | Apenas o Mestre remove via `DELETE /rooms/{id}/members/{userId}`; recalcula `current_players`; o Mestre nao pode ser removido (409); alvo precisa ser membro (404) |
 | Banir jogador | Apenas o Mestre bane via `POST /rooms/{id}/bans/{userId}`; remove da sala e impede reentrada mesmo com convite valido (`joinRoom` checa `room_bans` -> 403); o Mestre nao pode ser banido (409); idempotente |
 | Desbanir jogador | Apenas o Mestre desbane via `DELETE /rooms/{id}/bans/{userId}`; jogador nao banido -> 404 |
-| Cleanup no delete | `deleteRoom` remove `room_bans` alem de `room_players` e convite (FK sem cascade) |
+| Cleanup no delete | `deleteRoom` remove `room_bans`, `room_sheets` (objetos MinIO + linhas) e a imagem de capa, alem de `room_players` e convite (FK sem cascade) |
+| Descricao | `description` opcional (ate 500 caracteres) no create/update; exibida na home e nos detalhes |
+| Imagem de capa | Mestre envia via `POST /rooms/{id}/cover` (PNG/JPG/WEBP, MinIO); membros baixam via `GET /rooms/{id}/cover`; `hasCover` no response |
 | Duplicidade | Retorna 409 se jogador ja esta na sala (ou e o proprio Mestre) |
 | Convite invalido | Retorna 404 se o hash nao existe ou expirou |
 
@@ -629,6 +651,10 @@ CREATE TABLE room_bans (
     banned_at TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT uk_room_bans UNIQUE (room_id, user_id)
 );
+
+-- V8__Add_Room_Description_And_Cover.sql
+ALTER TABLE rooms ADD COLUMN description VARCHAR(500);
+ALTER TABLE rooms ADD COLUMN cover_object_key VARCHAR(512);
 ```
 
 ## Swagger
